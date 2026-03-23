@@ -26,7 +26,7 @@ export async function* fixedRateTicks(
         t0Ns?:bigint, //ancrage du temps 0
     }
 ): AsyncGenerator<TickTiming> {
-    if(!Number.isFinite(options.periodMs || options.periodMs <= 0)) {
+    if(!Number.isFinite(options.periodMs) || options.periodMs <= 0) {
         throw new Error("fixedRateTicks: periodMs must be a positive number");
     }
     const periodNs = msToNs(options.periodMs);
