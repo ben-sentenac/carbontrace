@@ -216,6 +216,8 @@ export async function auditCommand(argv = process.argv.slice(2)) {
     return;
   }
 
+  console.log(result);
+
 
 
   // 5) print result

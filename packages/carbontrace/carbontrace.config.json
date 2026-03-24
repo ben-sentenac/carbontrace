@@ -7,7 +7,7 @@
         "pidleWatts":3.2,
         "pmaxWatts":25,
         "tdpWatts":45,
-        "idleFraction":0.07,
-        "maxFraction":0.55
+        "idleFraction":0.20,
+        "maxFraction":0.90
     }
 }
