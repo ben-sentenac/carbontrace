@@ -1,5 +1,5 @@
 export function printHelp() {
-    console.log(`
+  console.log(`
 Usage:
   audit --pid <pid> [--duration 10] [--tick 1000] [--ef 475] [--json] [-v|-vv]
   audit --spawn "<cmd>" [--duration 10] [--tick 1000] [--ef 475] [--json] [-v|-vv]

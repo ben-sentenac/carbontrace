@@ -3,7 +3,7 @@ import process from "node:process";
 //import { readFile } from "node:fs/promises";
 import { printHelp } from "./command/help-command.js";
 import { auditCommand } from "./command/audit-command.js";
-
+import logger from "../../../shared/src/utils/logger.js";
 //fallback calibrated
 //audit --pid 1234 --duration 10 --pidleW 3.2 --pmaxW 25 -v
 //TDP non calibrate
@@ -18,11 +18,13 @@ VALID_COMMANDS.add('help');
 
 
 async function main(argv:string[] = process.argv.slice(2)) {
+
     const [command = 'help',...options] = argv;
-    console.log(command,options);
-    console.log("============================");
-    console.log("Nodefootprint v 0.0.1");
-    console.log("============================\n");
+
+    logger.paint("============================","blue");
+    logger.paint("CarbonTrace v 0.0.1","green");
+    logger.paint("============================\n","blue");
+
     if(VALID_COMMANDS.has(command)) {
       switch(command) {
         case 'help':
@@ -39,14 +41,14 @@ async function main(argv:string[] = process.argv.slice(2)) {
           break;
       }
     } else {
-      console.log('[Message]: Invalid_command');
+      logger.error('Invalid_command');
       printHelp();
       process.exit(1);
     }
 }
 
 await main().catch((err) => {
-  console.error(err.message);
+  logger.error(err.message);
   printHelp();
   process.exit(1);
 });

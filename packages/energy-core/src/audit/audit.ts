@@ -72,6 +72,7 @@ export async function audit(options: AuditOptions): Promise<AuditResult> {
         emissionFactor_gCO2ePerKWh,
         debugTiming = false,
         debugMeta = false,
+        signal,
     } = options;
 
     //start audit
@@ -101,7 +102,8 @@ export async function audit(options: AuditOptions): Promise<AuditResult> {
     for await (const tick of fixedRateTicks({
         periodMs: tickMs,
         overrunPolicy: "coalesce",
-        t0Ns: startTimeNs
+        t0Ns: startTimeNs,
+        signal
     })) {
 
         // condition fin de loop 

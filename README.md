@@ -1,7 +1,7 @@
-# NodeFootPrint
-![Node.js CI](https://github.com/web-resilience/NodeFootPrint/actions/workflows/nodeFootPrint.yaml/badge.svg)
+# CarbonTrace
+![Node.js CI](https://github.com/web-resilience/CarbonTrace/actions/workflows/CarbonTrace.yaml/badge.svg)
 
-# nodefootprint
+# CarbonTrace
 
 > **CPU energy auditing for Node.js processes on Linux.**  
 > Measure real CPU energy consumption and carbon footprint of any process, by PID or by spawning a command.
@@ -10,7 +10,7 @@
 
 ## What it does
 
-`nodefootprint` measures the **CPU energy** consumed by a specific process over a given duration, and converts that into a **carbon footprint** (gCO2e).
+`CarbonTrace` measures the **CPU energy** consumed by a specific process over a given duration, and converts that into a **carbon footprint** (gCO2e).
 
 It reads energy directly from the Linux RAPL hardware interface when available, and falls back to an empirical estimation model (based on CPU load × power profile) when RAPL is not accessible (VMs, unprivileged containers, AMD systems without RAPL exposure).
 
@@ -37,13 +37,13 @@ It reads energy directly from the Linux RAPL hardware interface when available, 
 ## Installation
 
 ```bash
-npm install -g @nodefootprint/cli
+npm install -g @carbontrace/cli
 ```
 
 Or as a dev dependency in your project:
 
 ```bash
-npm install --save-dev @nodefootprint/core
+npm install --save-dev @carbontrace/core
 ```
 
 ---
@@ -53,36 +53,36 @@ npm install --save-dev @nodefootprint/core
 ### Audit an existing process by PID
 
 ```bash
-nodefootprint audit --pid 1234 --duration 10
+carbontrace audit --pid 1234 --duration 10
 ```
 
 ### Spawn and audit a command
 
 ```bash
-nodefootprint audit --spawn "node my-script.js --iterations 1000000" --duration 30
+carbontrace audit --spawn "node my-script.js --iterations 1000000" --duration 30
 ```
 
 ### With an empirical fallback (when RAPL is unavailable)
 
 ```bash
 # Recommended: provide measured idle/max power for your CPU
-nodefootprint audit --pid 1234 --pidleW 8 --pmaxW 65 --duration 10
+carbontrace audit --pid 1234 --pidleW 8 --pmaxW 65 --duration 10
 
 # Or use TDP as a rough estimate
-nodefootprint audit --pid 1234 --tdp 65 --duration 10
+carbontrace audit --pid 1234 --tdp 65 --duration 10
 ```
 
 ### Use a config file
 
 ```bash
-nodefootprint audit --pid 1234 --config ./nodefootprint.config.json
+carbontrace audit --pid 1234 --config ./CarbonTrace.config.json
 ```
 
 ---
 
 ## Configuration file
 
-`nodefootprint.config.json`
+`carbontrace.config.json`
 
 ```json
 {
@@ -114,7 +114,7 @@ France-specific value: ~52 gCO2e/kWh (nuclear-heavy grid).
 | `--pmaxW <w>` | CPU max power in Watts (fallback) | — |
 | `--tdp <w>` | CPU TDP in Watts (coarse fallback) | — |
 | `--ef <gCO2e/kWh>` | Emission factor override | `475` |
-| `--config <path>` | Path to config file | `nodefootprint.config.json` |
+| `--config <path>` | Path to config file | `CarbonTrace.config.json` |
 | `--json` | Output raw JSON result | `false` |
 | `-v` / `--verbose` | Show energy source and parameters | — |
 | `-vv` | Verbose + debug metadata | — |
@@ -163,7 +163,7 @@ Process CPU carbon footprint: 0.000425 gCO2e
 Process active: yes
 
 --------------------------
-nodefootprint v.0.0.1
+CarbonTrace v.0.0.1
 ```
 
 ---
@@ -171,7 +171,7 @@ nodefootprint v.0.0.1
 ## Programmatic API
 
 ```typescript
-import { audit, createSamplers } from "@nodefootprint/core";
+import { audit, createSamplers } from "@carbontrace/core";
 
 const samplers = await createSamplers(pid, {
   pidleWatts: 8,

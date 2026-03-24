@@ -1,5 +1,5 @@
 import { readFile } from "fs/promises";
-import { extractErrorCode } from "@nodefootprint/shared";
+import { extractErrorCode } from "@carbontrace/shared";
 
 export interface AppConfig {
     emissionFactor?: {
@@ -15,7 +15,7 @@ export interface AppConfig {
     }
 }
 
-export async function loadConfig(configPath: string): Promise<AppConfig | undefined> {
+export async function loadConfig(configPath: string,debug = false): Promise<AppConfig | undefined> {
     try {
 
         const raw = await readFile(configPath, 'utf-8');
@@ -27,6 +27,12 @@ export async function loadConfig(configPath: string): Promise<AppConfig | undefi
 
     } catch (error) {
         const code = extractErrorCode(error);
-        if (code === 'ENOENT') throw new Error(`[--config]: no such file ${configPath}`);
+        if (code === 'ENOENT') {
+            if(debug) {
+                throw new Error(`[--config]: no such file ${configPath}`);
+            }
+            return undefined;
+        }
+        throw error;
     }
 }

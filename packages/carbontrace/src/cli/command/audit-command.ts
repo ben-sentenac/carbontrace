@@ -1,5 +1,5 @@
 import { parseArgs } from "node:util";
-import  process  from "node:process";
+import process from "node:process";
 import path from "node:path";
 import { spawnTarget, killGracefully, extractVerbosity, parsePositiveNumberFromCommand, tryReadProcComm } from "./command-utils.js";
 import { audit } from "../../index.js";
@@ -63,8 +63,9 @@ export async function auditCommand(argv = process.argv.slice(2)) {
   }
 
   //load config if needed
-  const configPath = values.config ?? path.resolve(process.cwd(),'nodefootprint.config.json');
-  const config: AppConfig | undefined | null = configPath ? await loadConfig(configPath) : null;
+  const config: AppConfig | undefined | null = values.config
+    ? await loadConfig(values.config, false)
+    : await loadConfig(path.resolve(process.cwd(), 'carbontrace.config.json'), false);
 
 
   const tdp = values.tdp ? Number(values.tdp) : undefined;
@@ -245,5 +246,5 @@ export async function auditCommand(argv = process.argv.slice(2)) {
     console.log("\nDebug meta:");
     console.log(JSON.stringify((result as any).meta, null, 2));
   }
-  console.log("nodefootprint v.0.0.1");
+  console.log("carbontrace v.0.0.1");
 }

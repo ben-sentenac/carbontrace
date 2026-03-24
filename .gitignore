@@ -8,3 +8,6 @@ pnpm-lock.yaml
 archi-refactor.md
 docs
 coverage
+BUGFIXES.md
+create-issues.sh
+todo.md

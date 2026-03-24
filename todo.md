@@ -1,7 +1,7 @@
 ## Energy-core
 - [ ] change createEnergyReader interface options
 - [ ] add public types
-## NodeFootprint cli
+## CarbonTrace cli
 - [ ] add --keepAlive when spawn pid on nodefootprint cli
 - [ ] add monitor command on nodefootprint cli 
 - [ ] add export JSON on nodefootprint

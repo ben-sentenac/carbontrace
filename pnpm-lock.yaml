@@ -8,10 +8,13 @@ importers:
 
   .:
     dependencies:
-      '@nodefootprint/energy-core':
+      '@carbontrace/carbontrace':
+        specifier: workspace:*
+        version: link:packages/carbontrace
+      '@carbontrace/energy-core':
         specifier: workspace:*
         version: link:packages/energy-core
-      '@nodefootprint/shared':
+      '@carbontrace/shared':
         specifier: workspace:*
         version: link:packages/shared
       ajv:
@@ -34,9 +37,9 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  packages/energy-core: {}
+  packages/carbontrace: {}
 
-  packages/nodefootprint: {}
+  packages/energy-core: {}
 
   packages/shared: {}
 
