@@ -5,9 +5,9 @@
   "packageManager": "pnpm@10.14.0",
   "scripts": {
     "dev:nf":"pnpm --filter carbontrace dev",
-    "test-nf":"pnpm --filter carbontrace test",
+    "test-nf":"pnpm --filter @carbontrace/carbontrace test",
     "test-ec":"pnpm --filter @carbontrace/energy-core test",
-    "test": "pnpm -r test",
+    "test": "pnpm -r --parallel test",
     "build": "pnpm -r build"
   },
     "devDependencies": {

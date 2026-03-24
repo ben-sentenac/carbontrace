@@ -3,10 +3,10 @@ import { test, describe } from 'node:test';
 import { fixedRateTicks } from './scheduler'; // Ajustez le chemin
 import { setTimeout } from 'node:timers/promises';
 
-describe('fixedRateTicks Generator', async () => {
+test('fixedRateTicks Generator', async (t) => {
 
     // --- TEST DES ERREURS D'ENTRÉE ---
-    await test('Validation: must throw if periodMs is <= 0', async () => {
+    await t.test('Validation: must throw if periodMs is <= 0', async () => {
         // Note: use assert.rejectsbecause of asynchronous generator
         await assert.rejects(
             async () => {
@@ -26,7 +26,7 @@ describe('fixedRateTicks Generator', async () => {
     });
 
     // --- OK ---
-    await test('OK: must generate ticks with good values', async () => {
+    await t.test('OK: must generate ticks with good values', async () => {
         const periodMs = 10;
         const gen = fixedRateTicks({ periodMs });
         
@@ -42,7 +42,7 @@ describe('fixedRateTicks Generator', async () => {
     });
 
     // --- "BURST" POLICY ---
-    await test('Policy "burst": must not jump tick if late', async () => {
+    await t.test('Policy "burst": must not jump tick if late', async () => {
         const periodMs = 20;
         const gen = fixedRateTicks({ periodMs, overrunPolicy: 'burst' });
 
@@ -62,7 +62,7 @@ describe('fixedRateTicks Generator', async () => {
     });
 
     // --- "COALESCE" POLICY ---
-    await test('Policy "coalesce": must jump tick if late', async () => {
+    await t.test('Policy "coalesce": must jump tick if late', async () => {
         const periodMs = 10;
         const gen = fixedRateTicks({ periodMs, overrunPolicy: 'coalesce' });
 
@@ -82,7 +82,7 @@ describe('fixedRateTicks Generator', async () => {
     });
 
     // --- TEST DE L'ABORT SIGNAL ---
-    await test('Signal: must stop when abort signal is called', async () => {
+    await t.test('Signal: must stop when abort signal is called', async () => {
         const controller = new AbortController();
         const gen = fixedRateTicks({ periodMs: 100, signal: controller.signal });
 
