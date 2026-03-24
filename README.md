@@ -1,5 +1,5 @@
 # CarbonTrace
-![Node.js CI](https://github.com/web-resilience/CarbonTrace/actions/workflows/CarbonTrace.yaml/badge.svg)
+![Node.js CI](https://github.com/ben-sentenac/carbontrace/actions/workflows/carbontrace.yaml/badge.svg)
 
 # CarbonTrace
 
