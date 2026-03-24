@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { clampDt } from "../../timers/timing.js";
-import { extractErrorCode, reasonFromCode } from "@nodefootprint/shared";
+import { extractErrorCode, reasonFromCode } from "@carbontrace/shared";
 
 interface CpuReaderOptions {
     log?: 'silent' | 'debug';
