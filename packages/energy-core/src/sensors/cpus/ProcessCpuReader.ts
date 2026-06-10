@@ -20,20 +20,28 @@ interface ProcessCpuSample {
 }
 
 
-interface ProcessStatSnapshot {
-    ok: boolean,
-    error?: string | null,
-    timeStamp: string | null;
-    pid: number | null;
-    comm: string | null;
-    state: string | null;
-    ppid: number | null;
-    utime: bigint | null;
-    stime: bigint | null;
-    cutime: bigint | null;
-    cstime: bigint | null;
-    starttime: bigint | null;
+interface ProcessStatSuccessSnapshot {
+    ok: true;
+    timeStamp: string;
+    pid: number;
+    comm: string;
+    state: string;
+    ppid: number;
+    utime: bigint;
+    stime: bigint;
+    cutime: bigint;
+    cstime: bigint;
+    starttime: bigint;
 }
+
+interface ProcessStatErrorSnapshot {
+    ok: false;
+    error: string;
+}
+
+type ProcessStatSnapshot =
+    | ProcessStatSuccessSnapshot
+    | ProcessStatErrorSnapshot;
 
 interface ProcessCpuReaderState {
     last_app_ticks: bigint | null;//utime + stime at last tick 
@@ -102,36 +110,26 @@ export async function parsePidStatFile(statFilePath: string): Promise<ProcessSta
         }
         const snapshot: ProcessStatSnapshot = {
             ok: true,
-            error: null,
             timeStamp: new Date().toISOString(),
-            pid: pid ?? null,
-            comm: (pidStat.comm as string) ?? null,
-            state: (pidStat.state as string) ?? null,
-            ppid: typeof pidStat.ppid === 'number' ? (pidStat.ppid as number) : (pidStat.ppid == null ? null : Number(pidStat.ppid as string)),
-            utime: pidStat.utime == null ? null : (typeof pidStat.utime === 'bigint' ? pidStat.utime as bigint : BigInt(Number(pidStat.utime))),
-            stime: pidStat.stime == null ? null : (typeof pidStat.stime === 'bigint' ? pidStat.stime as bigint : BigInt(Number(pidStat.stime))),
-            cutime: pidStat.cutime == null ? null : (typeof pidStat.cutime === 'bigint' ? pidStat.cutime as bigint : BigInt(Number(pidStat.cutime))),
-            cstime: pidStat.cstime == null ? null : (typeof pidStat.cstime === 'bigint' ? pidStat.cstime as bigint : BigInt(Number(pidStat.cstime))),
-            starttime: pidStat.starttime == null ? null : (typeof pidStat.starttime === 'bigint' ? pidStat.starttime as bigint : BigInt(Number(pidStat.starttime))),
+            pid,
+            comm: pidStat.comm as string,
+            state: pidStat.state as string,
+            ppid: Number(pidStat.ppid),
+            utime: BigInt(pidStat.utime as number | bigint | string),
+            stime: BigInt(pidStat.stime as number | bigint | string),
+            cutime: BigInt(pidStat.cutime as number | bigint | string),
+            cstime: BigInt(pidStat.cstime as number | bigint | string),
+            starttime: BigInt(pidStat.starttime as number | bigint | string),
         };
 
         return snapshot;
     } catch (error) {
         const code = extractErrorCode(error);
+
         return {
             ok: false,
             error: reasonFromCode(code),
-            timeStamp: null,
-            pid: null,
-            comm: null,
-            state: null,
-            ppid: null,
-            utime: null,
-            stime: null,
-            cutime: null,
-            cstime: null,
-            starttime: null
-        } as ProcessStatSnapshot;
+        };
     }
 }
 
@@ -167,35 +165,39 @@ export class ProcessCpuReader {
         }
     }
 
-    static async probe(pid: number): Promise<{ ok: boolean, error?: string }> {
+    static async probe(pid: number): Promise<{ ok: boolean; error?: string }> {
         const snapshot = await parsePidStatFile(`/proc/${pid}/stat`);
-        if (!snapshot.ok) {
+
+        if (snapshot.ok === false) {
             return {
                 ok: false,
-                error: snapshot.error ?? "file_not_found"
+                error: snapshot.error,
             };
         }
+
         const DEAD_STATES = new Set(['Z', 'X', 'T']);
-        if (DEAD_STATES.has(snapshot.state ?? '')) {
+
+        if (DEAD_STATES.has(snapshot.state)) {
             return { ok: false, error: `process_dead (state: ${snapshot.state})` };
         }
+
         return { ok: true };
     }
 
     async sample(): Promise<ProcessCpuSample | { ok: false; error: string; }> {
         const pidStat = await parsePidStatFile(this.statFilePath);
 
-        if (!pidStat.ok || pidStat.pid === null) {
-            return {
-                ok: false,
-                error: pidStat.error ?? "pid_stat_read_failure",
-            }
-        }
+    if (pidStat.ok === false) {
+        return {
+            ok: false,
+            error: pidStat.error,
+        };
+    }
 
-        const { pid, utime, stime, starttime } = pidStat;
+    const { pid, utime, stime, starttime } = pidStat;
 
-        const current_app_ticks = (utime ?? BigInt(0)) + (stime ?? BigInt(0));
-        const current_start_time_ticks = starttime ?? BigInt(0);
+    const current_app_ticks = utime + stime;
+    const current_start_time_ticks = starttime;
 
         //first read/initialization
         if (!this.state.primed) {
@@ -205,7 +207,7 @@ export class ProcessCpuReader {
             return {
                 ok: true,
                 primed: false,
-                pid: Number(pid),
+                pid,
                 cpuTicks: { unit: "jiffies", deltaActive: 0n },
             }
         }
@@ -220,7 +222,7 @@ export class ProcessCpuReader {
             return {
                 ok: true,
                 primed: false,
-                pid: Number(pid),
+                pid,
                 cpuTicks: { unit: "jiffies", deltaActive: 0n },
             }
         }
@@ -234,7 +236,7 @@ export class ProcessCpuReader {
         return {
             ok: true,
             primed: this.state.primed,
-            pid: Number(pid),
+            pid,
             cpuTicks: { unit: "jiffies", deltaActive: delta_active_ticks },
         };
     }
