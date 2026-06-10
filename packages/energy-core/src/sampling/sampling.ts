@@ -14,6 +14,7 @@ export interface Samplers {
     energyReader?: EnergyReader;
     cpuReader?: CpuReader;
     processCpuReader?: ProcessCpuReader;
+    processCpuReaders?: ProcessCpuReader[];  // futur
 };
 
 export interface Samples {
@@ -35,7 +36,7 @@ export async function createSamplers(target: AuditTarget, fallbackOptions: FallB
     if (pid === undefined) {
         throw new Error("sampler target must contain at least one pid");
     }
-    
+
     const probe = await raplProbe();
     const fb = fallbackOptions;
     return {
