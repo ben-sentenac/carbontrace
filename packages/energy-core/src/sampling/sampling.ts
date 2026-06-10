@@ -10,6 +10,9 @@ import { raplProbe } from "../sensors/rapl/rapl-probe.js";
 import type { AuditTarget } from "../audit/AuditTarget.js";
 import { normalizeTarget } from "../audit/normalizeTarget.js";
 
+import { aggregateProcessCpuSnapshots } from "../sensors/cpus/aggregateProcessCpuSnapshots.js";
+import type { ProcessCpuGroupSnapshot } from "../sensors/cpus/ProcessCpuGroupSnapshot.js";
+
 export interface Samplers {
     energyReader?: EnergyReader;
     cpuReader?: CpuReader;
@@ -22,6 +25,7 @@ export interface Samples {
     cpu: Awaited<ReturnType<CpuReader["sample"]>> | null;
     processCpu: Awaited<ReturnType<ProcessCpuReader["sample"]>> | null;
     processCpus?: Awaited<ReturnType<ProcessCpuReader["sample"]>>[];
+    processCpuGroup?: ProcessCpuGroupSnapshot;
 }
 
 type FallBackOptions = EnergyReaderFactoryOptions["fallback"];
@@ -74,5 +78,9 @@ export async function collectSamples(samplers: Samplers, nowNs: bigint): Promise
       )
     : undefined;
 
-    return { energy, cpu, processCpu, processCpus };
+    const processCpuGroup = processCpus
+    ? aggregateProcessCpuSnapshots(processCpus)
+    : undefined;
+
+    return { energy, cpu, processCpu, processCpus,processCpuGroup };
 }
