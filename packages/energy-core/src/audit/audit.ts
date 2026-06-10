@@ -32,6 +32,7 @@ export type EndReason = "duration" | "aborted" | "process_died";
 
 export interface AuditResult {
     pid: number;
+    targetPids: number[];
     durationSeconds: number;
 
     hostCpuEnergyJoules: number;
@@ -261,6 +262,7 @@ export async function audit(options: AuditOptions): Promise<AuditResult> {
 
     return {
         pid,
+        targetPids:pids,
         durationSeconds: effectiveDuration,
 
         hostCpuEnergyJoules,
