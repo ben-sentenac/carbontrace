@@ -51,8 +51,8 @@ export interface AuditResult {
         processErrorSamples: number;
         firstProcessError: string | null;
 
-        totalHostCpuActiveTicks?:bigint | string;
-        totalProcessCpuActiveTicks?:bigint | string;
+        totalHostCpuActiveTicks?: bigint | string;
+        totalProcessCpuActiveTicks?: bigint | string;
 
         endReason: EndReason;
 
@@ -131,17 +131,19 @@ export async function audit(options: AuditOptions): Promise<AuditResult> {
 
         if (samples.cpu?.ok && samples.cpu.primed) cpuPrimedSamples++;
 
-        if (samples.processCpu?.ok) {
-            processOkSamples++;
-        } else if (samples.processCpu && (samples.processCpu as any).ok === false) {
-            processErrorSamples++;
-            const error = (samples.processCpu as any).error ?? "unknown";
-            if (!firstProcessError) firstProcessError = error;
+        if (samples.processCpu) {
+            if (samples.processCpu.ok) {
+                processOkSamples++;
+            } else {
+                processErrorSamples++;
 
-            //couper l'audit si process mort
-            if(error === "file_not_found") {
-                endReason = "process_died";
-                break;
+                const error = samples.processCpu.error;
+                if (!firstProcessError) firstProcessError = error;
+
+                if (error === "file_not_found") {
+                    endReason = "process_died";
+                    break;
+                }
             }
         }
 
@@ -255,7 +257,7 @@ export async function audit(options: AuditOptions): Promise<AuditResult> {
         meta: debugMeta ? {
             tickMs,
             tickCount,
-            skippedPeriodsTotal:skippedPeriodsTotal.toString(),
+            skippedPeriodsTotal: skippedPeriodsTotal.toString(),
 
             energyPrimedSamples,
             cpuPrimedSamples,
@@ -263,8 +265,8 @@ export async function audit(options: AuditOptions): Promise<AuditResult> {
             processOkSamples,
             processErrorSamples,
             firstProcessError,
-            totalHostCpuActiveTicks:totalHostCpuActiveTicks.toString(),
-            totalProcessCpuActiveTicks:totalProcessCpuActiveTicks.toString(),
+            totalHostCpuActiveTicks: totalHostCpuActiveTicks.toString(),
+            totalProcessCpuActiveTicks: totalProcessCpuActiveTicks.toString(),
 
             endReason
 
