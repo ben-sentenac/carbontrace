@@ -2,7 +2,7 @@ import { collectSamples, type Samplers } from "../sampling/sampling.js";
 import { AuditAccumulator } from "./AuditAccumulator.js";
 import { fixedRateTicks } from "../timers/scheduler.js";
 import { NS_PER_MS, nowNs } from "../timers/timing.js";
-
+import type { AuditTarget } from "./AuditTarget.js";
 
 function nsToMs(ns: bigint): number {
     return Number(ns) / Number(NS_PER_MS);
@@ -11,6 +11,7 @@ function nsToMs(ns: bigint): number {
 const JOULES_PER_KWH = 3_600_000;
 
 export interface AuditOptions {
+    target?: AuditTarget;
     pid: number;
     durationSeconds: number;
     tickMs?: number;
@@ -22,7 +23,8 @@ export interface AuditOptions {
     debugTiming: boolean;
     debugMeta?: boolean;
 
-    signal?: AbortSignal
+    signal?: AbortSignal;
+
 }
 
 export type EndReason = "duration" | "aborted" | "process_died";
@@ -74,6 +76,11 @@ export async function audit(options: AuditOptions): Promise<AuditResult> {
         debugMeta = false,
         signal,
     } = options;
+
+    const target : AuditTarget = options.target ?? {
+        kind: "process",
+        pid: options.pid
+    };
 
     //start audit
     const startTimeNs = process.hrtime.bigint();
