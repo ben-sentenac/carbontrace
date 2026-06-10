@@ -7,6 +7,9 @@ import {
 } from "../sensors/rapl/energyReader.js";
 import { raplProbe } from "../sensors/rapl/rapl-probe.js";
 
+import type { AuditTarget } from "../audit/AuditTarget.js";
+import { normalizeTarget } from "../audit/normalizeTarget.js";
+
 export interface Samplers {
     energyReader?: EnergyReader;
     cpuReader?: CpuReader;
@@ -25,7 +28,14 @@ function finiteNumberOrUndefined(value: number | undefined): number | undefined 
     return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
-export async function createSamplers(pid: number, fallbackOptions: FallBackOptions):Promise<Samplers> {
+export async function createSamplers(target: AuditTarget, fallbackOptions: FallBackOptions):Promise<Samplers> {
+    const pids = normalizeTarget(target);
+    const pid = pids[0];
+
+    if (pid === undefined) {
+        throw new Error("sampler target must contain at least one pid");
+    }
+    
     const probe = await raplProbe();
     const fb = fallbackOptions;
     return {

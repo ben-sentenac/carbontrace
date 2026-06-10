@@ -205,7 +205,7 @@ export async function auditCommand(argv = process.argv.slice(2)): Promise<void> 
 
   const target = buildAuditTarget([pid]);
 
-  const samplers = await createSamplers(pid, fallback);
+  const samplers = await createSamplers(target, fallback);
 
   //--- optionnal context in verbose mode
 
