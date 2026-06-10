@@ -3,12 +3,20 @@ export interface CarbonEstimationInput {
     emissionFactor:number; // grams CO2 per kWh
 }
 
-export interface CarbonEstimationResult {
-    ok:boolean;
-    energy_Kwh?:number;
-    carbon_gCO2e?:number;
-    reason?:string;
+export interface CarbonEstimationSuccess {
+    ok: true;
+    energy_Kwh: number;
+    carbon_gCO2e: number;
 }
+
+export interface CarbonEstimationError {
+    ok: false;
+    reason: string;
+}
+
+export type CarbonEstimationResult =
+    | CarbonEstimationSuccess
+    | CarbonEstimationError;
 
 const JOULES_PER_KWH = 3.6e6; // 1 kWh = 3.6 million Joules
 
