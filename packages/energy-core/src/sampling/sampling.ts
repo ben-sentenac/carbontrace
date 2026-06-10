@@ -21,6 +21,10 @@ export interface Samples {
 
 type FallBackOptions = EnergyReaderFactoryOptions["fallback"];
 
+function finiteNumberOrUndefined(value: number | undefined): number | undefined {
+    return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
 export async function createSamplers(pid: number, fallbackOptions: FallBackOptions) {
     const probe = await raplProbe();
     const fb = fallbackOptions;
@@ -28,9 +32,9 @@ export async function createSamplers(pid: number, fallbackOptions: FallBackOptio
         energyReader: createEnergyReader({
             probe,
             fallback: {
-                tdpWatts: Number.isFinite(fb?.tdpWatts as any) ? fb?.tdpWatts : undefined,
-                pidleWatts: Number.isFinite(fb?.pidleWatts as any) ? fb?.pidleWatts : undefined,
-                pmaxWatts: Number.isFinite(fb?.pmaxWatts as any) ? fb?.pmaxWatts : undefined,
+                tdpWatts: finiteNumberOrUndefined(fb?.tdpWatts),
+                pidleWatts: finiteNumberOrUndefined(fb?.pidleWatts),
+                pmaxWatts: finiteNumberOrUndefined(fb?.pmaxWatts),
             }
         }),
         cpuReader: new CpuReader({}),
