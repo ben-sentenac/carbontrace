@@ -1,5 +1,5 @@
-import { nowNs, NS_PER_MS } from "./timing.js";
-import { fixedRateTicks } from "./scheduler.js";
+import { nowNs, NS_PER_MS } from "../src/timers/timing.js";
+import { fixedRateTicks } from "../src/timers/scheduler.js";
 /** Convert ns(BigInt) -> ms(number) lisible */
 function nsToMs(ns: bigint): number {
     return Number(ns) / Number(NS_PER_MS);

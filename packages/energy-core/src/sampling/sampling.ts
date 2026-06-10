@@ -25,7 +25,7 @@ function finiteNumberOrUndefined(value: number | undefined): number | undefined 
     return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
-export async function createSamplers(pid: number, fallbackOptions: FallBackOptions) {
+export async function createSamplers(pid: number, fallbackOptions: FallBackOptions):Promise<Samplers> {
     const probe = await raplProbe();
     const fb = fallbackOptions;
     return {

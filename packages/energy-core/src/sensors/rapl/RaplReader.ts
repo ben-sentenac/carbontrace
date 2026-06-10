@@ -8,12 +8,12 @@ export interface RaplReaderOptions {
     log?: 'silent' | 'debug';
 }
 export interface RaplPackageSample {
-  node: string;
-  path: string;
-  deltaUj: number; // µJ
-  deltaJ: number;  // J
-  wraps: number;
-  ok: boolean;     // lecture OK pour ce package sur ce tick ?
+    node: string;
+    path: string;
+    deltaUj: number; // µJ
+    deltaJ: number;  // J
+    wraps: number;
+    ok: boolean;     // lecture OK pour ce package sur ce tick ?
 }
 export interface RaplSample {
     ok: boolean;
@@ -85,12 +85,12 @@ export class RaplReader {
             console.error('⚠️  [RaplReader] ASSERTION FAILED: probe contract violated');
             console.error('    Expected: probe.status=OK implies at least one readable package');
             console.error('    Got: 0 readable packages');
-             if (this.log === 'debug') {
+            if (this.log === 'debug') {
                 console.error('    Probe data:', JSON.stringify(probe, null, 2));
             }
             return;
         }
-        
+
         this.probeStatus = 'OK';
         this.probeHints = null;
 
@@ -199,14 +199,14 @@ export class RaplReader {
         internalClampedDt = clampDt(internalClampedDt);
         state.lastNs = nowNs;
 
-        const readResults:RaplEnergyReadResult[] = await Promise.all(
+        const readResults: RaplEnergyReadResult[] = await Promise.all(
             state.packages.map(async (pkg) => {
                 try {
                     const raw = await readFile(pkg.file, { encoding: "utf-8" });
                     const currentUj = BigInt(raw.trim());
-                    return { ok:true, pkg, currentUj };
+                    return { ok: true, pkg, currentUj };
                 } catch {
-                    return { ok:false,pkg};
+                    return { ok: false, pkg };
                 }
             })
         );
