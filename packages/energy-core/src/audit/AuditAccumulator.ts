@@ -13,6 +13,14 @@ export interface AccumulatorTotals {
   totalProcessCpuActiveTicks: bigint;
 }
 
+function isPositiveFiniteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
+}
+
+function isPositiveBigInt(value: unknown): value is bigint {
+  return typeof value === "bigint" && value > 0n;
+}
+
 export class AuditAccumulator {
   readonly startTimeNs: bigint;
   endTimeNs?: bigint;
@@ -31,23 +39,16 @@ export class AuditAccumulator {
    * Toute valeur absente est ignorée.
    */
   push(sample: AccumulatorSample): void {
-    if (typeof sample.hostCpuEnergyJoules === "number") {
-      if (sample.hostCpuEnergyJoules > 0) {
-        this._hostCpuEnergyJoules += sample.hostCpuEnergyJoules;
-      }
+    if (isPositiveFiniteNumber(sample.hostCpuEnergyJoules)) {
+      this._hostCpuEnergyJoules += sample.hostCpuEnergyJoules;
     }
 
-    if (typeof sample.hostCpuActiveTicks === "bigint") {
-      if (sample.hostCpuActiveTicks > 0n) {
-        this._totalHostCpuActiveTicks += sample.hostCpuActiveTicks;
-      }
+    if (isPositiveBigInt(sample.hostCpuActiveTicks)) {
+      this._totalHostCpuActiveTicks += sample.hostCpuActiveTicks;
     }
 
-    if (typeof sample.processCpuActiveTicks === "bigint") {
-      if (sample.processCpuActiveTicks > 0n) {
-        this._totalProcessCpuActiveTicks +=
-          sample.processCpuActiveTicks;
-      }
+    if (isPositiveBigInt(sample.processCpuActiveTicks)) {
+      this._totalProcessCpuActiveTicks += sample.processCpuActiveTicks;
     }
   }
 
