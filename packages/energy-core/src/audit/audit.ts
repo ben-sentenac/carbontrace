@@ -48,12 +48,19 @@ export interface AuditResult {
         tickCount: number;
         skippedPeriodsTotal: bigint | string;
 
+        targetPids: number[];
+        targetProcessCount: number;
+
         energyPrimedSamples: number;
         cpuPrimedSamples: number;
 
         processOkSamples: number;
         processErrorSamples: number;
         firstProcessError: string | null;
+
+        processAliveSamples: number;
+        processDeadSamples: number;
+        processPrimedSamples: number;
 
         totalHostCpuActiveTicks?: bigint | string;
         totalProcessCpuActiveTicks?: bigint | string;
@@ -62,6 +69,8 @@ export interface AuditResult {
 
         // petits hints utiles pour comprendre un "0 J"
         notes?: string[];
+
+
     };
 }
 
@@ -108,6 +117,10 @@ export async function audit(options: AuditOptions): Promise<AuditResult> {
     let processOkSamples = 0;
     let processErrorSamples = 0;
 
+    let processAliveSamples = 0;
+    let processDeadSamples = 0;
+    let processPrimedSamples = 0;
+
     let firstProcessError: string | null = null;
 
     let endReason: EndReason = "duration";
@@ -142,6 +155,12 @@ export async function audit(options: AuditOptions): Promise<AuditResult> {
         const samples = await collectSamples(samplers, tick.startNs);
 
         //--meta stats (for -vv)
+
+        if (samples.processCpuGroup) {
+            processAliveSamples += samples.processCpuGroup.aliveProcesses;
+            processDeadSamples += samples.processCpuGroup.deadProcesses;
+            processPrimedSamples += samples.processCpuGroup.primedProcesses;
+        }
 
         if (samples.energy?.ok && samples.energy.primed) energyPrimedSamples++;
 
@@ -178,10 +197,10 @@ export async function audit(options: AuditOptions): Promise<AuditResult> {
 
             processCpuActiveTicks:
                 samples.processCpuGroup //if multi pid
-                ? samples.processCpuGroup.totalDeltaActiveTicks
-                : samples.processCpu && samples.processCpu.ok //else single pid
-                    ? samples.processCpu.cpuTicks.deltaActive
-                    : undefined,
+                    ? samples.processCpuGroup.totalDeltaActiveTicks
+                    : samples.processCpu && samples.processCpu.ok //else single pid
+                        ? samples.processCpu.cpuTicks.deltaActive
+                        : undefined,
         });
 
         const workEndNs = nowNs();
@@ -262,7 +281,7 @@ export async function audit(options: AuditOptions): Promise<AuditResult> {
 
     return {
         pid,
-        targetPids:pids,
+        targetPids: pids,
         durationSeconds: effectiveDuration,
 
         hostCpuEnergyJoules,
@@ -278,11 +297,19 @@ export async function audit(options: AuditOptions): Promise<AuditResult> {
             tickCount,
             skippedPeriodsTotal: skippedPeriodsTotal.toString(),
 
+            targetPids: pids,
+            targetProcessCount: pids.length,
+
             energyPrimedSamples,
             cpuPrimedSamples,
 
             processOkSamples,
             processErrorSamples,
+
+            processAliveSamples,
+            processDeadSamples,
+            processPrimedSamples,
+
             firstProcessError,
             totalHostCpuActiveTicks: totalHostCpuActiveTicks.toString(),
             totalProcessCpuActiveTicks: totalProcessCpuActiveTicks.toString(),
