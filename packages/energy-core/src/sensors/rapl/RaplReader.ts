@@ -39,6 +39,10 @@ interface RaplReaderState {
     packages: RaplReaderPackageState[];
 }
 
+type RaplEnergyReadResult =
+    | { ok: true; pkg: RaplReaderPackageState; currentUj: bigint }
+    | { ok: false; pkg: RaplReaderPackageState };
+
 export class RaplReader {
     private state: RaplReaderState | null = null;
     private log: 'silent' | 'debug';
@@ -195,44 +199,46 @@ export class RaplReader {
         internalClampedDt = clampDt(internalClampedDt);
         state.lastNs = nowNs;
 
-        const readResults = await Promise.all(
+        const readResults:RaplEnergyReadResult[] = await Promise.all(
             state.packages.map(async (pkg) => {
                 try {
                     const raw = await readFile(pkg.file, { encoding: "utf-8" });
-                    const currentUJ = BigInt(raw.trim());
-                    return { pkg, currentUJ };
+                    const currentUj = BigInt(raw.trim());
+                    return { ok:true, pkg, currentUj };
                 } catch {
-                    return { pkg, currentUJ: null as bigint | null };
+                    return { ok:false,pkg};
                 }
             })
         );
 
         const packageSamples: RaplPackageSample[] = [];
 
-        for (const { pkg, currentUJ } of readResults) {
+        for (const result of readResults) {
+            const { pkg } = result;
             // read result for this package
             let pkgDeltaUj = 0n;
             let pkgWraps = 0n;
             let pkgOk = false;
 
-            if (currentUJ !== null) {
+            if (result.ok) {
+                const currentUj = result.currentUj;
                 pkgOk = true;
                 successfulReads++;
 
                 if (pkg.lastUj === null) {
                     // DIDN'T HAVE HISTORY → priming for this package
-                    pkg.lastUj = currentUJ;
+                    pkg.lastUj = currentUj;
                 } else {
                     // HAD HISTORY → can compute delta
                     primed = true;
 
-                    let deltaUj = currentUJ - pkg.lastUj;
+                    let deltaUj = currentUj - pkg.lastUj;
 
                     // wraparound
                     if (deltaUj < 0n && pkg.maxEnergyUj !== null) {
                         wraps += 1n;
                         pkgWraps += 1n;
-                        deltaUj = (pkg.maxEnergyUj - pkg.lastUj) + currentUJ;
+                        deltaUj = (pkg.maxEnergyUj - pkg.lastUj) + currentUj;
                     }
 
                     if (deltaUj >= 0n) {
@@ -240,7 +246,7 @@ export class RaplReader {
                         pkgDeltaUj = deltaUj;
                     }
 
-                    pkg.lastUj = currentUJ;
+                    pkg.lastUj = currentUj;
                 }
             }
 
