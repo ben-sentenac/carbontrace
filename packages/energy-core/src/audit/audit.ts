@@ -176,7 +176,9 @@ export async function audit(options: AuditOptions): Promise<AuditResult> {
                     : undefined,
 
             processCpuActiveTicks:
-                samples.processCpu && samples.processCpu.ok
+                samples.processCpuGroup //if multi pid
+                ? samples.processCpuGroup.totalDeltaActiveTicks
+                : samples.processCpu && samples.processCpu.ok //else single pid
                     ? samples.processCpu.cpuTicks.deltaActive
                     : undefined,
         });
