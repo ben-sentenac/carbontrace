@@ -17,7 +17,7 @@ export interface RaplPackageSample {
 }
 export interface RaplSample {
     ok: boolean;
-    primed?: boolean;
+    primed: boolean;
     internalClampedDt: number;
     deltaUj: number;   // µJ
     deltaJ: number;    // J
