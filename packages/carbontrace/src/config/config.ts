@@ -64,16 +64,20 @@ function isAppConfig(value: unknown): value is AppConfig {
     return true;
 }
 
-export async function loadConfig(configPath: string,debug = false): Promise<AppConfig | undefined> {
+export async function loadConfig(configPath: string, debug = false): Promise<AppConfig | undefined> {
     try {
 
         const raw = await readFile(configPath, 'utf-8');
-        const parsed:unknown = JSON.parse(raw);
+        const parsed: unknown = JSON.parse(raw);
 
         if (typeof parsed !== "object" || parsed === null) {
             throw new Error("--config: invalid JSON object");
         }
-        return parsed as AppConfig;
+        if (!isAppConfig(parsed)) {
+            throw new Error("--config: invalid config shape");
+        }
+
+        return parsed;
 
     } catch (error) {
         const code = extractErrorCode(error);
