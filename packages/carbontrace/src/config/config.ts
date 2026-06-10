@@ -15,6 +15,55 @@ export interface AppConfig {
     }
 }
 
+
+function isNumber(value: unknown): value is number {
+    return typeof value === "number" && Number.isFinite(value);
+}
+
+function isAppConfig(value: unknown): value is AppConfig {
+    if (typeof value !== "object" || value === null) {
+        return false;
+    }
+
+    const config = value as Record<string, unknown>;
+
+    if (config.emissionFactor !== undefined) {
+        const ef = config.emissionFactor;
+
+        if (typeof ef !== "object" || ef === null) {
+            return false;
+        }
+
+        const record = ef as Record<string, unknown>;
+
+        if (typeof record.country !== "string" || !isNumber(record.factor)) {
+            return false;
+        }
+    }
+
+    if (config.fallback !== undefined) {
+        const fallback = config.fallback;
+
+        if (typeof fallback !== "object" || fallback === null) {
+            return false;
+        }
+
+        const record = fallback as Record<string, unknown>;
+
+        if (
+            !isNumber(record.pidleWatts) ||
+            !isNumber(record.pmaxWatts) ||
+            !isNumber(record.tdpWatts) ||
+            !isNumber(record.idleFraction) ||
+            !isNumber(record.maxFraction)
+        ) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 export async function loadConfig(configPath: string,debug = false): Promise<AppConfig | undefined> {
     try {
 
