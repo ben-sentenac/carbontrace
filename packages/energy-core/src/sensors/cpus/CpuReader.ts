@@ -8,7 +8,7 @@ interface CpuReaderOptions {
 }
 
 export interface CpuSample {
-    ok:true;
+    ok: true;
     primed: boolean;
     internalClampedDt: number;
     cpuTicks: {
@@ -31,31 +31,31 @@ interface CpuReaderState {
     lastIdle: bigint | null;
 }
 
-interface ProcStatSnapshot {
-    ok: boolean,
-    error?: string | null,
-    timeStamp: string | null;
-    aggregate: {
-        user: bigint;
-        nice: bigint;
-        system: bigint;
-        idle: bigint;
-        iowait: bigint;
-        irq: bigint;
-        softirq: bigint;
-        steal: bigint;
-    } | null;
-    perCpu: Array<{
-        user: bigint;
-        nice: bigint;
-        system: bigint;
-        idle: bigint;
-        iowait: bigint;
-        irq: bigint;
-        softirq: bigint;
-        steal: bigint;
-    }>;
+interface CpuTimes {
+    user: bigint;
+    nice: bigint;
+    system: bigint;
+    idle: bigint;
+    iowait: bigint;
+    irq: bigint;
+    softirq: bigint;
+    steal: bigint;
 }
+
+type ProcStatSnapshot =
+    | {
+        ok: true;
+        timeStamp: string;
+        aggregate: CpuTimes;
+        perCpu: CpuTimes[];
+    }
+    | {
+        ok: false;
+        error: string;
+        timeStamp: null;
+        aggregate: null;
+        perCpu: [];
+    };
 
 interface CpuTotal {
     idle: bigint,
@@ -69,44 +69,77 @@ interface CpuTotal {
  * @param file  Path to the /proc/stat file (default: '/proc/stat')
  * @returns     ProcStatSnapshot containing aggregate and per-CPU stats
  */
-export async function parseProcStat(file: string = '/proc/stat') {
+export async function parseProcStat(file: string = '/proc/stat'): Promise<ProcStatSnapshot> {
     const _file = file ?? '/proc/stat';
+
     try {
         const statFile = await readFile(_file, 'utf-8');
         const lines = statFile.split('\n');
 
-        const statSnapshot: ProcStatSnapshot = { ok: false, timeStamp: null, aggregate: null, perCpu: [] };
+        let aggregate: CpuTimes | null = null;
+        const perCpu: CpuTimes[] = [];
 
         for (const line of lines) {
             if (!line.startsWith('cpu')) continue;
+
             const parts = line.trim().split(/\s+/);
-            // cpu user nice system idle iowait irq softirq steal guest guest_nice
+
             if (parts.length < 5) continue;
-            const user = BigInt(parts[1] || '0');
-            const nice = BigInt(parts[2] || '0');
-            const system = BigInt(parts[3] || '0');
-            const idle = BigInt(parts[4] || '0');
-            const iowait = BigInt(parts[5] || '0');
-            const irq = BigInt(parts[6] || '0');
-            const softirq = BigInt(parts[7] || '0');
-            const steal = BigInt(parts[8] || '0');
-            // Determine if aggregate or per-cpu
+
+            const cpuTimes: CpuTimes = {
+                user: BigInt(parts[1] || '0'),
+                nice: BigInt(parts[2] || '0'),
+                system: BigInt(parts[3] || '0'),
+                idle: BigInt(parts[4] || '0'),
+                iowait: BigInt(parts[5] || '0'),
+                irq: BigInt(parts[6] || '0'),
+                softirq: BigInt(parts[7] || '0'),
+                steal: BigInt(parts[8] || '0'),
+            };
+
             if (line.startsWith('cpu ')) {
-                statSnapshot.aggregate = { user, nice, system, idle, iowait, irq, softirq, steal };
+                aggregate = cpuTimes;
             } else {
-                statSnapshot.perCpu.push({ user, nice, system, idle, iowait, irq, softirq, steal });
+                perCpu.push(cpuTimes);
             }
         }
-        // if file is empty or invalid
-        if (!statSnapshot.aggregate && !statSnapshot.perCpu.length) {
-            return { ok: false, error: 'invalid_file_content', aggregate: null };
+
+        if (aggregate === null && perCpu.length === 0) {
+            return {
+                ok: false,
+                error: 'invalid_file_content',
+                timeStamp: null,
+                aggregate: null,
+                perCpu: [],
+            };
         }
-        statSnapshot.timeStamp = new Date().toISOString();
-        statSnapshot.ok = true;
-        return statSnapshot;
+
+        if (aggregate === null) {
+            return {
+                ok: false,
+                error: 'missing_cpu_aggregate',
+                timeStamp: null,
+                aggregate: null,
+                perCpu: [],
+            };
+        }
+
+        return {
+            ok: true,
+            timeStamp: new Date().toISOString(),
+            aggregate,
+            perCpu,
+        };
     } catch (error) {
         const code = extractErrorCode(error);
-        return { ok: false, error: reasonFromCode(code) ?? 'error_accessing_file', aggregate: null };
+
+        return {
+            ok: false,
+            error: reasonFromCode(code) ?? 'error_accessing_file',
+            timeStamp: null,
+            aggregate: null,
+            perCpu: [],
+        };
     }
 }
 
@@ -115,19 +148,16 @@ export async function parseProcStat(file: string = '/proc/stat') {
  * @param snapshot Aggregate CPU statistics snapshot
  * @returns Object containing idle, active, and total CPU ticks
  */
-export function computeCpuUtilization(snapshot: ProcStatSnapshot['aggregate']): CpuTotal {
-    const _snapshot = snapshot ?? {
-        user: BigInt(0),
-        iowait: BigInt(0),
-        idle: BigInt(0),
-        nice: BigInt(0),
-        system: BigInt(0),
-        irq: BigInt(0),
-        softirq: BigInt(0),
-        steal: BigInt(0)
-    };
-    const idle = _snapshot.idle + _snapshot.iowait;
-    const active = _snapshot.user + _snapshot.nice + _snapshot.system + _snapshot.irq + _snapshot.softirq + _snapshot.steal;
+export function computeCpuUtilization(snapshot: CpuTimes): CpuTotal {
+    const idle = snapshot.idle + snapshot.iowait;
+    const active =
+        snapshot.user +
+        snapshot.nice +
+        snapshot.system +
+        snapshot.irq +
+        snapshot.softirq +
+        snapshot.steal;
+
     return { idle, active, total: idle + active };
 }
 
@@ -161,12 +191,12 @@ export class CpuReader {
 
     async sample(nowNs: bigint): Promise<CpuSample | CpuSampleError> {
         const snapshot = await parseProcStat(this.statFilePath);
-        if (snapshot.error) {
-            // technically an error
-            return { ok: false, error: String(snapshot.error) };
+        
+        if (snapshot.ok === false) {
+            return { ok: false, error: snapshot.error };
         }
-        const aggregate = snapshot?.aggregate;
-        const stats =  computeCpuUtilization(aggregate);
+        const stats = computeCpuUtilization(snapshot.aggregate);
+
         if (this.log === "debug") {
             process.stdout.write(`CPU stats idle:${stats.idle} active:${stats.active}, total:${stats.total}\n`);
         }

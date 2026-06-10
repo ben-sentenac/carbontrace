@@ -10,20 +10,27 @@ import { createStatFileUnderControl, nowNs as generateNowNs } from "../../utils/
 
 test('CpuReader test suite', async (t) => {
     //peu probable mais si pour une obscure raison absent ou invalide
-    await t.test('parseProcStat: KO if don\'t exist or invalid', async (t) => {
-        const temp = os.tmpdir();
-        const invalidFile = path.join(temp, `stat-${process.pid}`);
-        try {
-            await writeFile(invalidFile, '');
-            //le fichier n'existe pas
-            const notfound = await parseProcStat('/fakeProc/fakeFile')
-            assert.equal(notfound.error, 'file_not_found');
-            //le fichier est corrompu ou vide
-            assert.equal((await parseProcStat(invalidFile)).error, 'invalid_file_content');
-        } finally {
-            await rm(invalidFile, { recursive: true, force: true });
-        }
-    });
+  await t.test("parseProcStat: KO if don't exist or invalid", async () => {
+    const notfound = await parseProcStat('/does/not/exist');
+
+    assert.equal(notfound.ok, false);
+
+    assert.equal(notfound.error, 'file_not_found');
+
+    const invalidFile = path.join(os.tmpdir(), `stat-invalid-${process.pid}`);
+
+    try {
+        await writeFile(invalidFile, 'invalid content');
+
+        const invalid = await parseProcStat(invalidFile);
+
+        assert.equal(invalid.ok, false);
+
+        assert.equal(invalid.error, 'invalid_file_content');
+    } finally {
+        await rm(invalidFile, { force: true });
+    }
+});
     await t.test('parseProcStat: OK', async (t) => {
         let statFile: string | undefined;
         try {
@@ -52,26 +59,21 @@ test('CpuReader test suite', async (t) => {
         }
     });
 
-    await t.test('computeCpuUtilization OK', async () => {
-        const none = await computeCpuUtilization(null);
-        const good = await computeCpuUtilization({
-            user: BigInt(5),
-            iowait: BigInt(5),
-            idle: BigInt(100),
-            nice: BigInt(0),
-            system: BigInt(150),
-            irq: BigInt(200),
-            softirq: BigInt(0),
-            steal: BigInt(0)
+    await t.test('computeCpuUtilization OK', () => {
+        const stats = computeCpuUtilization({
+            user: 5n,
+            iowait: 5n,
+            idle: 100n,
+            nice: 0n,
+            system: 150n,
+            irq: 200n,
+            softirq: 0n,
+            steal: 0n,
         });
-        //theoriquement impossible
-        assert.equal(none.active, 0n);
-        assert.equal(none.idle, 0n);
-        assert.equal(none.total, 0n);
-        //bonne valeur
-        assert.equal(good.active, 355n);
-        assert.equal(good.idle, 105n);
-        assert.equal(good.total, 460n);
+
+        assert.equal(stats.active, 355n);
+        assert.equal(stats.idle, 105n);
+        assert.equal(stats.total, 460n);
     });
 
     await t.test('CpuReader.sample OK', async () => {
@@ -85,18 +87,18 @@ test('CpuReader test suite', async (t) => {
                 idle: 2000
             }
             statFilePath = await createStatFileUnderControl(temp, stat1);
-            const reader = new CpuReader({ statFilePath,log:'debug' });
+            const reader = new CpuReader({ statFilePath, log: 'debug' });
 
             const nowNs = process.hrtime.bigint();
             const sample1 = await reader.sample(nowNs);
 
             assert.ok(sample1.ok);
-            assert.equal(sample1.internalClampedDt,0);
-            assert.equal(sample1.primed,false);
-            assert.equal(sample1.cpuUtilization,0);
-            assert.equal(sample1.cpuTicks.deltaTotalTicks,0n);
+            assert.equal(sample1.internalClampedDt, 0);
+            assert.equal(sample1.primed, false);
+            assert.equal(sample1.cpuUtilization, 0);
+            assert.equal(sample1.cpuTicks.deltaTotalTicks, 0n);
 
-            statFilePath = await createStatFileUnderControl(temp,{user: 2500,nice:200, system: 600, idle: 2200});
+            statFilePath = await createStatFileUnderControl(temp, { user: 2500, nice: 200, system: 600, idle: 2200 });
 
             const nowNs2 = nowNs + generateNowNs(2.0);//1 sec plus tard
 
@@ -105,18 +107,18 @@ test('CpuReader test suite', async (t) => {
             assert.ok(sample2.ok);
             assert.ok(sample2.primed);
             assert.ok(sample2.internalClampedDt >= 0.001 && sample2.internalClampedDt <= 10);
-            assert.equal(sample2.internalClampedDt,clampDt(2));
-            assert.equal(sample2.cpuTicks.deltaTotalTicks,1500n);
-            assert.equal(sample2.cpuUtilization,1);
-            
+            assert.equal(sample2.internalClampedDt, clampDt(2));
+            assert.equal(sample2.cpuTicks.deltaTotalTicks, 1500n);
+            assert.equal(sample2.cpuUtilization, 1);
+
 
 
         } finally {
-            if(statFilePath) {
-                await rm(statFilePath,{recursive:true,force:true});
+            if (statFilePath) {
+                await rm(statFilePath, { recursive: true, force: true });
             }
         }
-        
+
 
 
     });
