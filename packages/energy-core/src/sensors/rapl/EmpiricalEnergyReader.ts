@@ -59,8 +59,8 @@ export class EmpiricalEnergyReader {
             pidleWatts,
             pmaxWatts,
             tdpWatts,
-            idleFraction = 0.07,
-            maxFraction = 0.55,
+            idleFraction = 0.2,
+            maxFraction = 0.9,
             statFilePath,
             log = "silent"
         } = options;
