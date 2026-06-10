@@ -1,4 +1,4 @@
-import { collectSamples } from "../sampling/sampling.js";
+import { collectSamples, type Samplers } from "../sampling/sampling.js";
 import { AuditAccumulator } from "./AuditAccumulator.js";
 import { fixedRateTicks } from "../timers/scheduler.js";
 import { NS_PER_MS, nowNs } from "../timers/timing.js";
@@ -10,16 +10,12 @@ function nsToMs(ns: bigint): number {
 
 const JOULES_PER_KWH = 3_600_000;
 
-interface AuditOptions {
+export interface AuditOptions {
     pid: number;
     durationSeconds: number;
     tickMs?: number;
 
-    samplers: {
-        energyReader?: any;
-        cpuReader?: any;
-        processCpuReader?: any;
-    };
+    samplers: Samplers;
 
     emissionFactor_gCO2ePerKWh: number;
 
@@ -29,7 +25,9 @@ interface AuditOptions {
     signal?: AbortSignal
 }
 
-interface AuditResult {
+export type EndReason = "duration" | "aborted" | "process_died";
+
+export interface AuditResult {
     pid: number;
     durationSeconds: number;
 
@@ -56,12 +54,14 @@ interface AuditResult {
         totalHostCpuActiveTicks?:bigint | string;
         totalProcessCpuActiveTicks?:bigint | string;
 
-        endReason: "duration" | "aborted";
+        endReason: EndReason;
 
         // petits hints utiles pour comprendre un "0 J"
         notes?: string[];
     };
 }
+
+
 
 export async function audit(options: AuditOptions): Promise<AuditResult> {
     const {
@@ -94,7 +94,7 @@ export async function audit(options: AuditOptions): Promise<AuditResult> {
 
     let firstProcessError: string | null = null;
 
-    let endReason: "duration" | "aborted" = "duration";
+    let endReason: EndReason = "duration";
 
     const notes: string[] = [];
     // end debug meta init
@@ -128,6 +128,7 @@ export async function audit(options: AuditOptions): Promise<AuditResult> {
         //--meta stats (for -vv)
 
         if (samples.energy?.ok && samples.energy.primed) energyPrimedSamples++;
+
         if (samples.cpu?.ok && samples.cpu.primed) cpuPrimedSamples++;
 
         if (samples.processCpu?.ok) {
@@ -136,6 +137,12 @@ export async function audit(options: AuditOptions): Promise<AuditResult> {
             processErrorSamples++;
             const error = (samples.processCpu as any).error ?? "unknown";
             if (!firstProcessError) firstProcessError = error;
+
+            //couper l'audit si process mort
+            if(error === "file_not_found") {
+                endReason = "process_died";
+                break;
+            }
         }
 
 
