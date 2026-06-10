@@ -264,7 +264,7 @@ export async function auditCommand(argv = process.argv.slice(2)): Promise<void> 
   console.log(`Process avg CPU power: ${result.processCpuEnergyJoules / result.durationSeconds} W`);
   console.log("\n-----------CARBON---------\n");
   console.log(`CPU Carbon Footprint:`);
-  console.log(`Emission Factor:475`);
+  console.log(`Emission Factor: ${emissionFactor} gCO2e/kWh`);
   console.log(`Host CPU carbon footprint: ${result.hostCpuCarbon_gCO2e.toFixed(6)} gCO2e`);
   console.log(`Process CPU carbon footprint: ${result.processCpuCarbon_gCO2e.toFixed(6)} gCO2e`);
   console.log("\n--------------------------\n");
