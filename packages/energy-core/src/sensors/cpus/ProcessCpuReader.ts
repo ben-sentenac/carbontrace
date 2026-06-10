@@ -10,13 +10,13 @@ interface ProcessCpuReaderOptions {
 }
 
 interface ProcessCpuSample {
-  ok: boolean;
-  primed: boolean;
-  pid: number;
-  cpuTicks: {
-    unit: "jiffies";
-    deltaActive: bigint;
-  };
+    ok: true;
+    primed: boolean;
+    pid: number;
+    cpuTicks: {
+        unit: "jiffies";
+        deltaActive: bigint;
+    };
 }
 
 
@@ -167,12 +167,27 @@ export class ProcessCpuReader {
         }
     }
 
+    static async probe(pid: number): Promise<{ ok: boolean, error?: string }> {
+        const snapshot = await parsePidStatFile(`/proc/${pid}/stat`);
+        if (!snapshot.ok) {
+            return {
+                ok: false,
+                error: snapshot.error ?? "file_not_found"
+            };
+        }
+        const DEAD_STATES = new Set(['Z', 'X', 'T']);
+        if (DEAD_STATES.has(snapshot.state ?? '')) {
+            return { ok: false, error: `process_dead (state: ${snapshot.state})` };
+        }
+        return { ok: true };
+    }
+
     async sample(): Promise<ProcessCpuSample | { ok: false; error: string; }> {
         const pidStat = await parsePidStatFile(this.statFilePath);
-        
-        if(!pidStat.ok || pidStat.pid === null) {
+
+        if (!pidStat.ok || pidStat.pid === null) {
             return {
-                ok:false,
+                ok: false,
                 error: pidStat.error ?? "pid_stat_read_failure",
             }
         }
@@ -183,44 +198,44 @@ export class ProcessCpuReader {
         const current_start_time_ticks = starttime ?? BigInt(0);
 
         //first read/initialization
-        if(!this.state.primed){
+        if (!this.state.primed) {
             this.state.last_app_ticks = current_app_ticks;
             this.state.last_start_time_ticks = current_start_time_ticks;
             this.state.primed = true;
             return {
-                ok:true,
-                primed:false,
+                ok: true,
+                primed: false,
                 pid: Number(pid),
-                cpuTicks: { unit:"jiffies",deltaActive: 0n },
+                cpuTicks: { unit: "jiffies", deltaActive: 0n },
             }
         }
 
         //process restart detected
-        if(this.state.last_start_time_ticks !== null && current_start_time_ticks !== this.state.last_start_time_ticks){
+        if (this.state.last_start_time_ticks !== null && current_start_time_ticks !== this.state.last_start_time_ticks) {
             this.state.last_app_ticks = current_app_ticks;
             this.state.last_start_time_ticks = current_start_time_ticks;
             this.state.primed = false;
             //TODO log restart event?
             this.log === 'debug' && process.stdout.write(`ProcessCpuReader: Process restart detected for PID ${pid}\n`);
             return {
-                ok:true,
-                primed:false,
+                ok: true,
+                primed: false,
                 pid: Number(pid),
-                cpuTicks: { unit:"jiffies",deltaActive: 0n },
+                cpuTicks: { unit: "jiffies", deltaActive: 0n },
             }
         }
-        
+
         let delta_active_ticks = current_app_ticks - (this.state.last_app_ticks ?? BigInt(0));
 
-        if(delta_active_ticks < 0n) delta_active_ticks = 0n;
+        if (delta_active_ticks < 0n) delta_active_ticks = 0n;
 
         this.state.last_app_ticks = current_app_ticks;
 
         return {
-            ok:true,
-            primed:this.state.primed,
+            ok: true,
+            primed: this.state.primed,
             pid: Number(pid),
-            cpuTicks: { unit:"jiffies", deltaActive: delta_active_ticks },
+            cpuTicks: { unit: "jiffies", deltaActive: delta_active_ticks },
         };
     }
 }

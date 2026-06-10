@@ -3,7 +3,7 @@ import process from "node:process";
 //import { readFile } from "node:fs/promises";
 import { printHelp } from "./command/help-command.js";
 import { auditCommand } from "./command/audit-command.js";
-import logger from "../../../shared/src/utils/logger.js";
+import  { logger } from "@carbontrace/shared";
 //fallback calibrated
 //audit --pid 1234 --duration 10 --pidleW 3.2 --pmaxW 25 -v
 //TDP non calibrate

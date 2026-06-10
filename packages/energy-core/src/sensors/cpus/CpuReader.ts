@@ -8,7 +8,7 @@ interface CpuReaderOptions {
 }
 
 export interface CpuSample {
-    ok: boolean;
+    ok:true;
     primed: boolean;
     internalClampedDt: number;
     cpuTicks: {
