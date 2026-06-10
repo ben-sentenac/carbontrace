@@ -19,7 +19,8 @@ export async function loadConfig(configPath: string,debug = false): Promise<AppC
     try {
 
         const raw = await readFile(configPath, 'utf-8');
-        const parsed = JSON.parse(raw);
+        const parsed:unknown = JSON.parse(raw);
+
         if (typeof parsed !== "object" || parsed === null) {
             throw new Error("--config: invalid JSON object");
         }
@@ -28,7 +29,7 @@ export async function loadConfig(configPath: string,debug = false): Promise<AppC
     } catch (error) {
         const code = extractErrorCode(error);
         if (code === 'ENOENT') {
-            if(debug) {
+            if (debug) {
                 throw new Error(`[--config]: no such file ${configPath}`);
             }
             return undefined;
