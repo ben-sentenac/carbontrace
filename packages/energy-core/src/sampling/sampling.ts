@@ -21,6 +21,7 @@ export interface Samples {
     energy: Awaited<ReturnType<EnergyReader["sample"]>> | null;
     cpu: Awaited<ReturnType<CpuReader["sample"]>> | null;
     processCpu: Awaited<ReturnType<ProcessCpuReader["sample"]>> | null;
+    processCpus?: Awaited<ReturnType<ProcessCpuReader["sample"]>>[];
 }
 
 type FallBackOptions = EnergyReaderFactoryOptions["fallback"];
@@ -29,7 +30,7 @@ function finiteNumberOrUndefined(value: number | undefined): number | undefined 
     return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
-export async function createSamplers(target: AuditTarget, fallbackOptions: FallBackOptions):Promise<Samplers> {
+export async function createSamplers(target: AuditTarget, fallbackOptions: FallBackOptions): Promise<Samplers> {
     const pids = normalizeTarget(target);
     const pid = pids[0];
 
@@ -50,11 +51,14 @@ export async function createSamplers(target: AuditTarget, fallbackOptions: FallB
         }),
         cpuReader: new CpuReader({}),
         processCpuReader: new ProcessCpuReader({ pid }),
+        processCpuReaders: pids.map(
+            pid => new ProcessCpuReader({ pid })
+        ),
     };
 }
 
 export async function collectSamples(samplers: Samplers, nowNs: bigint): Promise<Samples> {
-    const { energyReader, cpuReader, processCpuReader } = samplers;
+    const { energyReader, cpuReader, processCpuReader,processCpuReaders } = samplers;
     const [energy, cpu, processCpu] = await Promise.all(
         [
             energyReader ? energyReader.sample(nowNs) : Promise.resolve(null),
@@ -64,5 +68,11 @@ export async function collectSamples(samplers: Samplers, nowNs: bigint): Promise
         ]
     );
 
-    return { energy, cpu, processCpu };
+    const processCpus = processCpuReaders
+    ? await Promise.all(
+        processCpuReaders.map((reader) => reader.sample())
+      )
+    : undefined;
+
+    return { energy, cpu, processCpu, processCpus };
 }
