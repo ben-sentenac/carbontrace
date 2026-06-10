@@ -136,8 +136,8 @@ export async function auditCommand(argv = process.argv.slice(2)): Promise<void> 
 
   const configFallback: Partial<EmpiricalEnergyReaderOptions> = config?.fallback ?? {};
   const fallback = {
-    pidleWatts: hasIdleCli ? pidleWatts  : configFallback.pidleWatts,
-    pmaxWatts: hasMaxCli ? pmaxWatts  : configFallback.pmaxWatts,
+    pidleWatts: hasIdleCli ? pidleWatts : configFallback.pidleWatts,
+    pmaxWatts: hasMaxCli ? pmaxWatts : configFallback.pmaxWatts,
     tdpWatts: tdp ?? configFallback.tdpWatts,
     idleFraction: configFallback.idleFraction,
     maxFraction: configFallback.maxFraction,
@@ -181,6 +181,10 @@ export async function auditCommand(argv = process.argv.slice(2)): Promise<void> 
 
   const energyReader = samplers.energyReader;
 
+  if (!energyReader) {
+    throw new Error("Energy reader is missing");
+  }
+
   //if calibration not set in options or in config file error
   if (!energyReader.isReady) {
     if (child) killGracefully(child, 1000);
@@ -194,11 +198,9 @@ export async function auditCommand(argv = process.argv.slice(2)): Promise<void> 
   if (verbose) {
     if (values.config) console.log(`Config: ${values.config}`);
 
-    const er: any = samplers.energyReader;
+    console.log(`Energy source: ${energyReader.mode.toUpperCase()}`);
 
-    console.log(`Energy source: ${String(er?.mode ?? "unknown").toUpperCase()}`);
-
-    if (er?.mode === "fallback") {
+    if (energyReader.mode === "fallback") {
       console.log(`Fallback params source: ${fallbackSource.toUpperCase()}`);
       // optionnel: afficher les watts choisis
       if (fallback.pidleWatts && fallback.pmaxWatts) {
