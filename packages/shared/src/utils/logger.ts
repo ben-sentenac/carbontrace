@@ -16,7 +16,7 @@ const COLORS = {
 
 type ColorKey = keyof typeof COLORS.fg;
 
-const logger = (() => {
+export const logger = (() => {
 
     const format = (level: LoggerLevel, color: string, message: string) => {
 
@@ -51,5 +51,3 @@ const logger = (() => {
     });
 })();
 
-
-export default logger;
