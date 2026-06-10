@@ -1,7 +1,20 @@
 import { spawn } from "node:child_process";
+import type { ChildProcess } from "node:child_process";
 import { once } from "node:events";
 import { readFile } from "node:fs/promises";
 
+
+export interface VerbosityResult {
+  level: number;
+  debugMetaExplicit: boolean;
+  rest: string[];
+}
+
+export interface SpawnTargetResult {
+  child: ChildProcess;
+  childStdout: string;
+  childStderr: string;
+}
 
 // splitCommand.ts
 export interface SplitCommandOptions {
@@ -153,7 +166,7 @@ export function splitCommand(input: string, opts: SplitCommandOptions = {}): str
  * 2 === verbose + debug-meta 
  */
 
-export function extractVerbosity(args:string[]) {
+export function extractVerbosity(args:string[]):VerbosityResult {
   let level = 0;
   let debugMetaExplicit = false;
   const rest:string[] = [];
@@ -185,7 +198,7 @@ export function extractVerbosity(args:string[]) {
   return { level, debugMetaExplicit, rest}
 }
 
-export async function killGracefully(child: import("node:child_process").ChildProcess, timeoutMs = 2000) {
+export async function killGracefully(child: import("node:child_process").ChildProcess, timeoutMs = 2000):Promise<void> {
   if (!child.pid) return;
   if (child.exitCode !== null) return;
 
@@ -209,13 +222,13 @@ export async function killGracefully(child: import("node:child_process").ChildPr
   }
 }
 
-function keepLast(text: string, chunk: Buffer, maxBytes = 64_000) {
+function keepLast(text: string, chunk: Buffer, maxBytes = 64_000):string {
   text += chunk.toString("utf-8");
   if (text.length > maxBytes) text = text.slice(text.length - maxBytes);
   return text;
 }
 
-export async function spawnTarget(commandStr:string) {
+export async function spawnTarget(commandStr:string):Promise<SpawnTargetResult> {
 const argv = splitCommand(commandStr);
   if (argv.length === 0) {
     throw new Error("--spawn: command is empty");
@@ -257,7 +270,7 @@ const argv = splitCommand(commandStr);
   return {child, childStdout,childStderr};
 }
 
-export function parsePositiveNumberFromCommand(name:string,v:string | undefined,fallback:number) {
+export function parsePositiveNumberFromCommand(name:string,v:string | undefined,fallback:number):number {
   const n = v === undefined ? fallback : Number(v);
   if(!Number.isFinite(n) || n <= 0) {
     throw new Error(`${name} must be a positive number`);
@@ -265,7 +278,7 @@ export function parsePositiveNumberFromCommand(name:string,v:string | undefined,
   return n;
 }
 
-export async function tryReadProcComm(pid:number) {
+export async function tryReadProcComm(pid:number):Promise<string | null> {
   try {
     const comm = await readFile(`/proc/${pid}/comm`,"utf-8");
     return comm.trim();
