@@ -26,7 +26,7 @@ export interface EmpiricalEnergyReaderOptions {
 }
 
 
-function isPositive(n: any): n is number {
+function isPositive(n: unknown): n is number {
     return typeof n === "number" && Number.isFinite(n) && n > 0;
 }
 
@@ -127,8 +127,8 @@ export class EmpiricalEnergyReader {
                 wraps: 0
             }
         }
-        //TODO clampe value
-        const cpuLoad = cpuStat.cpuUtilization ?? 0;
+        
+        const cpuLoad = clamp01(cpuStat.cpuUtilization ?? 0);
         const dt = cpuStat.internalClampedDt;
 
         let pIdle: number;
