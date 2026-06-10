@@ -277,6 +277,8 @@ export async function auditCommand(argv = process.argv.slice(2)): Promise<void> 
     signal: controller.signal
   });
 
+  const renderedTarget = formatAuditTarget(result.targetPids);
+
   if (child && !values.keepAlive) {
     //kill
     await killGracefully(child, 2000);
@@ -286,6 +288,8 @@ export async function auditCommand(argv = process.argv.slice(2)): Promise<void> 
     console.log(JSON.stringify(result, null, 2));
     return;
   }
+
+
 
   // 5) print result
   console.log("==============================");
