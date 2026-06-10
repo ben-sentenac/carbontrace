@@ -1,11 +1,11 @@
 import { parseArgs } from "node:util";
 import process from "node:process";
 import path from "node:path";
-import { spawnTarget, killGracefully, extractVerbosity, parsePositiveNumberFromCommand, tryReadProcComm } from "./command-utils.js";
+import { spawnTarget, killGracefully, extractVerbosity, parsePositiveNumberFromCommand } from "./command-utils.js";
 import { audit } from "../../index.js";
-import { createSamplers } from "../../index";
+import { createSamplers } from "../../index.js";
 import { printHelp } from "./help-command.js";
-import { AppConfig, loadConfig } from "../../config/config.js";
+import { type AppConfig, loadConfig } from "../../config/config.js";
 import { EmpiricalEnergyReaderOptions } from "../../index.js";
 
 
@@ -22,7 +22,7 @@ import { EmpiricalEnergyReaderOptions } from "../../index.js";
 
 //TODO when -v dispaly source or options (via cli or via config)
 
-export async function auditCommand(argv = process.argv.slice(2)) {
+export async function auditCommand(argv = process.argv.slice(2)):Promise<void> {
 
   const { level: verbosity, debugMetaExplicit, rest } = extractVerbosity(argv);
 
