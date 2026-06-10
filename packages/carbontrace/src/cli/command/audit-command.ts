@@ -68,7 +68,7 @@ export async function auditCommand(argv = process.argv.slice(2)): Promise<void> 
 
       config: { type: "string" },
 
-      pid: { type: "string" },
+      pid: { type: "string", multiple:true },
       spawn: { type: "string" },
 
       pidleW: { type: "string" },// mincpuW
@@ -194,8 +194,15 @@ export async function auditCommand(argv = process.argv.slice(2)): Promise<void> 
       await killGracefully(child!, 1500);
       process.exit(130);
     });
-  } else if (values.pid) {
-    pid = Number(values.pid);
+  } else if (values.pid && values.pid.length > 0) {
+    const pids = values.pid.map(Number);
+
+    for (const pidValue of pids) {
+      if (!Number.isFinite(pidValue) || pidValue <= 1) {
+      throw new Error("--pid must be a valid process id");
+    }
+    }
+    pid = pids[0];
     if (!Number.isFinite(pid) || pid <= 1) {
       throw new Error("--pid must be a valid process id");
     }
@@ -203,8 +210,8 @@ export async function auditCommand(argv = process.argv.slice(2)): Promise<void> 
     throw new Error("Missing target: use --pid <pid> or --spawn \"cmd\"");
   }
 
-  const target = buildAuditTarget([pid]);
-
+  const targetPids = values.spawn ? [pid] : values.pid?.map(Number) ?? [pid];
+  const target = buildAuditTarget(targetPids);
   const samplers = await createSamplers(target, fallback);
 
   //--- optionnal context in verbose mode
