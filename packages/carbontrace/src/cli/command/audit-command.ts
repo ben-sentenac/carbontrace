@@ -203,6 +203,8 @@ export async function auditCommand(argv = process.argv.slice(2)): Promise<void> 
     throw new Error("Missing target: use --pid <pid> or --spawn \"cmd\"");
   }
 
+  const target = buildAuditTarget([pid]);
+
   const samplers = await createSamplers(pid, fallback);
 
   //--- optionnal context in verbose mode
@@ -251,6 +253,7 @@ export async function auditCommand(argv = process.argv.slice(2)): Promise<void> 
 
   const result = await audit({
     pid,
+    target,
     durationSeconds,
     tickMs,
     samplers,
