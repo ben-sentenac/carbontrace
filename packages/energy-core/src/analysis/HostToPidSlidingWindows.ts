@@ -8,24 +8,44 @@ export interface SlidingWindowInput {
    processCpuActiveTicks: bigint;
 }
 
-export interface SlidingWindowResult {
-    ok: boolean;
-    cpuShare?:number;
-    processEnergyJoules?: number;
-    samples?: number;
-    reason?:string;
-    windowCpuTicks?: {
-        unit:string;
-        hostActive:string;
-        processActive: string;
-    };
-    windowEnergy?:{
-        unit: string;
-        hostJoules: number;
-    }
-    isActive?: boolean;
+interface WindowCpuTicks {
+    unit: "jiffies";
+    hostActive: string;
+    processActive: string;
 }
 
+interface WindowEnergy {
+    unit: "joules";
+    hostJoules: number;
+}
+
+export interface SlidingWindowSuccess {
+    ok: true;
+    cpuShare: number;
+    processEnergyJoules: number;
+    samples: number;
+    windowCpuTicks: WindowCpuTicks;
+    windowEnergy: WindowEnergy;
+    isActive: boolean;
+}
+
+export interface SlidingWindowError {
+    ok: false;
+    reason: string;
+    samples: number;
+}
+
+export type SlidingWindowResult =
+    | SlidingWindowSuccess
+    | SlidingWindowError;
+
+
+function clamp01(value: number): number {
+    if (!Number.isFinite(value)) return 0;
+    if (value < 0) return 0;
+    if (value > 1) return 1;
+    return value;
+}
 
 export class HostToPidSlidingWindow {
     private windowSize:number;
@@ -36,7 +56,7 @@ export class HostToPidSlidingWindow {
         if(!Number.isFinite(options.windowSize) || options.windowSize <= 0) {
             throw new Error("Sliding window size must be a positive integer");
         }
-        this.windowSize = options.windowSize ??  10;
+        this.windowSize = options.windowSize;
 
 
     }
@@ -69,7 +89,7 @@ export class HostToPidSlidingWindow {
             }
         }
         const cpuShare = Number(sumProcessCpuActiveTicks) / Number(sumHostCpuActiveTicks);
-        const safeCpuShare = cpuShare < 0 ? 0 : cpuShare > 1 ? 1 : cpuShare; //clamp between 0 and 1
+        const safeCpuShare = clamp01(cpuShare) ; //clamp between 0 and 1
         const processEnergyJoules = sumEnergyJoules * safeCpuShare;
         return {
             ok:true,
