@@ -1,13 +1,13 @@
-import type { ProcessStatSnapshot } from "./ProcessCpuReader.js";
+import type { ProcessCpuReader } from "./ProcessCpuReader.js";
+
+export type ProcessCpuSampleResult =
+    Awaited<ReturnType<ProcessCpuReader["sample"]>>;
 
 export interface ProcessCpuGroupSnapshot {
     ok: true;
-
-    processes: ProcessStatSnapshot[];
-
+    processes: ProcessCpuSampleResult[];
     totalDeltaActiveTicks: bigint;
-
     aliveProcesses: number;
-
     deadProcesses: number;
+    primedProcesses: number;
 }
