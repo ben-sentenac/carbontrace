@@ -270,9 +270,9 @@ export async function auditCommand(argv = process.argv.slice(2)): Promise<void> 
   console.log("\n--------------------------\n");
   console.log(`Process active: ${result.isActive ? "yes" : "no"}`);
   console.log("\n--------------------------\n");
-  if (debugMeta && (result as any).meta) {
+  if (debugMeta && result.meta) {
     console.log("\nDebug meta:");
-    console.log(JSON.stringify((result as any).meta, null, 2));
+    console.log(JSON.stringify(result.meta, null, 2));
   }
   console.log("carbontrace v.0.0.1");
 }
