@@ -242,10 +242,6 @@ export async function auditCommand(argv = process.argv.slice(2)): Promise<void> 
     return;
   }
 
-  console.log(result);
-
-
-
   // 5) print result
   console.log("==============================");
   console.log("\nCPU Energy Audit (bounded)");
