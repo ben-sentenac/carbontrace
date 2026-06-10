@@ -22,7 +22,11 @@ import { EmpiricalEnergyReaderOptions } from "../../index.js";
 
 //TODO when -v dispaly source or options (via cli or via config)
 
-export async function auditCommand(argv = process.argv.slice(2)):Promise<void> {
+function parseOptionalNumber(value: string | undefined): number | undefined {
+  return value === undefined ? undefined : Number(value);
+}
+
+export async function auditCommand(argv = process.argv.slice(2)): Promise<void> {
 
   const { level: verbosity, debugMetaExplicit, rest } = extractVerbosity(argv);
 
@@ -68,9 +72,9 @@ export async function auditCommand(argv = process.argv.slice(2)):Promise<void> {
     : await loadConfig(path.resolve(process.cwd(), 'carbontrace.config.json'), false);
 
 
-  const tdp = values.tdp ? Number(values.tdp) : undefined;
-  const pidleWatts = values.pidleW ? Number(values.pidleW) : undefined;
-  const pmaxWatts = values.pmaxW ? Number(values.pmaxW) : undefined;
+  const tdp = parseOptionalNumber(values.tdp);
+  const pidleWatts = parseOptionalNumber(values.pidleW);
+  const pmaxWatts = parseOptionalNumber(values.pmaxW);
 
   const hasIdleCli = Number.isFinite(pidleWatts);
   const hasMaxCli = Number.isFinite(pmaxWatts);
@@ -84,8 +88,28 @@ export async function auditCommand(argv = process.argv.slice(2)):Promise<void> {
   if (hasIdleCli && (pmaxWatts as number) < (pidleWatts as number)) {
     throw new Error("--pmaxW must be >= --pidleW");
   }
-  if (values.tdp && (!Number.isFinite(tdp as any) || (tdp as number) <= 0)) {
-    throw new Error("--tdp must be > 0");
+
+
+  if (tdp !== undefined) {
+    if (!Number.isFinite(tdp) || tdp <= 0) {
+      throw new Error("--tdp must be > 0");
+    }
+  }
+
+  if (pidleWatts !== undefined && pidleWatts <= 0) {
+    throw new Error("--pidleW must be > 0");
+  }
+
+  if (pmaxWatts !== undefined && pmaxWatts <= 0) {
+    throw new Error("--pmaxW must be > 0");
+  }
+
+  if (
+    pidleWatts !== undefined &&
+    pmaxWatts !== undefined &&
+    pmaxWatts < pidleWatts
+  ) {
+    throw new Error("--pmaxW must be >= --pidleW");
   }
 
   const durationSeconds = parsePositiveNumberFromCommand('--duration', values.duration, 10);
@@ -112,9 +136,9 @@ export async function auditCommand(argv = process.argv.slice(2)):Promise<void> {
 
   const configFallback: Partial<EmpiricalEnergyReaderOptions> = config?.fallback ?? {};
   const fallback = {
-    pidleWatts: hasIdleCli ? (pidleWatts as number) : configFallback.pidleWatts,
-    pmaxWatts: hasMaxCli ? (pmaxWatts as number) : configFallback.pmaxWatts,
-    tdpWatts: values.tdp ? (tdp as number) : configFallback.tdpWatts,
+    pidleWatts: hasIdleCli ? pidleWatts  : configFallback.pidleWatts,
+    pmaxWatts: hasMaxCli ? pmaxWatts  : configFallback.pmaxWatts,
+    tdpWatts: tdp ?? configFallback.tdpWatts,
     idleFraction: configFallback.idleFraction,
     maxFraction: configFallback.maxFraction,
   }
