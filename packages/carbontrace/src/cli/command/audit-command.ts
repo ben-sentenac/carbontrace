@@ -54,6 +54,12 @@ function buildAuditTarget(pids: number[]): AuditTarget {
   };
 }
 
+function formatAuditTarget(pids: number[]): string {
+  return pids.length === 1
+    ? `PID:${pids[0]}`
+    : `PIDs:${pids.join(",")}`;
+}
+
 export async function auditCommand(argv = process.argv.slice(2)): Promise<void> {
 
   const { level: verbosity, debugMetaExplicit, rest } = extractVerbosity(argv);
@@ -68,7 +74,7 @@ export async function auditCommand(argv = process.argv.slice(2)): Promise<void> 
 
       config: { type: "string" },
 
-      pid: { type: "string", multiple:true },
+      pid: { type: "string", multiple: true },
       spawn: { type: "string" },
 
       pidleW: { type: "string" },// mincpuW
@@ -199,8 +205,8 @@ export async function auditCommand(argv = process.argv.slice(2)): Promise<void> 
 
     for (const pidValue of pids) {
       if (!Number.isFinite(pidValue) || pidValue <= 1) {
-      throw new Error("--pid must be a valid process id");
-    }
+        throw new Error("--pid must be a valid process id");
+      }
     }
     pid = pids[0];
     if (!Number.isFinite(pid) || pid <= 1) {
@@ -212,6 +218,8 @@ export async function auditCommand(argv = process.argv.slice(2)): Promise<void> 
 
   const targetPids = values.spawn ? [pid] : values.pid?.map(Number) ?? [pid];
   const target = buildAuditTarget(targetPids);
+  const targetLabel = formatAuditTarget(targetPids);
+
   const samplers = await createSamplers(target, fallback);
 
   //--- optionnal context in verbose mode
@@ -254,8 +262,7 @@ export async function auditCommand(argv = process.argv.slice(2)): Promise<void> 
     console.log("");
   }
 
-  console.log(`Starting audit for PID:${pid}...please wait`);
-
+  console.log(`Starting audit for ${targetLabel}...please wait`);
   // run audit
 
   const result = await audit({
@@ -285,7 +292,7 @@ export async function auditCommand(argv = process.argv.slice(2)): Promise<void> 
   console.log("\nCPU Energy Audit (bounded)");
   console.log("\n--------------------------\n");
   console.log(new Date().toLocaleDateString());
-  console.log(`PID: ${result.pid}`);
+  console.log(`Target: ${targetLabel}`);
   console.log(`Duration: ${result.durationSeconds.toFixed(2)} s`);
   console.log("\n---------ENERGY-----------\n");
   console.log(`Source: ${energyReader.mode}`);
