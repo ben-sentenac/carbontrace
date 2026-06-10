@@ -1,6 +1,6 @@
 import fastify from "fastify";
 
-export async function buildServer(shareData: any) {
+export async function buildServer(shareData: unknown) {
     const app = fastify({logger: true});
 
     app.get('/status', async (request, reply) => {
