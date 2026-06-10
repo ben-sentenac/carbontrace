@@ -3,6 +3,7 @@ import { AuditAccumulator } from "./AuditAccumulator.js";
 import { fixedRateTicks } from "../timers/scheduler.js";
 import { NS_PER_MS, nowNs } from "../timers/timing.js";
 import type { AuditTarget } from "./AuditTarget.js";
+import { normalizeTarget } from "./normalizeTarget.js";
 
 function nsToMs(ns: bigint): number {
     return Number(ns) / Number(NS_PER_MS);
@@ -11,8 +12,8 @@ function nsToMs(ns: bigint): number {
 const JOULES_PER_KWH = 3_600_000;
 
 export interface AuditOptions {
-    target?: AuditTarget;
     pid: number;
+    target?: AuditTarget;
     durationSeconds: number;
     tickMs?: number;
 
@@ -63,11 +64,15 @@ export interface AuditResult {
     };
 }
 
-
+function resolveAuditTarget(options: AuditOptions): AuditTarget {
+    return options.target ?? {
+        kind: "process",
+        pid: options.pid,
+    };
+}
 
 export async function audit(options: AuditOptions): Promise<AuditResult> {
     const {
-        pid,
         durationSeconds,
         tickMs = 1000,
         samplers,
@@ -77,10 +82,13 @@ export async function audit(options: AuditOptions): Promise<AuditResult> {
         signal,
     } = options;
 
-    const target : AuditTarget = options.target ?? {
-        kind: "process",
-        pid: options.pid
-    };
+    const target = resolveAuditTarget(options);
+    const pids = normalizeTarget(target);
+    const pid = pids[0];
+
+    if (pid === undefined) {
+        throw new Error("audit target must contain at least one pid");
+    }
 
     //start audit
     const startTimeNs = process.hrtime.bigint();
