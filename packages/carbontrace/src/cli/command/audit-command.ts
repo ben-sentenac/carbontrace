@@ -240,7 +240,7 @@ export async function auditCommand(argv = process.argv.slice(2)): Promise<void> 
   }
 
 
-  if (verbose) {
+  if (verbose && !jsonOutput) {
     if (values.config) console.log(`Config: ${values.config}`);
 
     console.log(`Energy source: ${energyReader.mode.toUpperCase()}`);
@@ -262,7 +262,11 @@ export async function auditCommand(argv = process.argv.slice(2)): Promise<void> 
     console.log("");
   }
 
-  console.log(`Starting audit for ${targetLabel}...please wait`);
+  if(!jsonOutput) {
+    console.log(`Starting audit for ${targetLabel}...please wait`);
+  }
+
+  
   // run audit
 
   const result = await audit({
