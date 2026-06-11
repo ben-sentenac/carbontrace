@@ -62,3 +62,17 @@ test("MonitorSession exposes buffer state", () => {
     assert.equal(session.size, 2);
     assert.equal(session.isFull, true);
 });
+
+test("MonitorSession exposes latest sample", () => {
+    const session = new MonitorSession({ capacity: 3 });
+
+    assert.equal(session.latestSample, undefined);
+
+    session.push(sample(1));
+    session.push(sample(2));
+
+    assert.deepEqual(
+        session.latestSample,
+        sample(2),
+    );
+});
