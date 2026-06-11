@@ -3,3 +3,4 @@ export * from "./audit/index.js";
 export * from "./sampling/index.js";
 export * from "./sensors/index.js";
 export * from "./timers/index.js";
+export * from "./monitor/index.js";
