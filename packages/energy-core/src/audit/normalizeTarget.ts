@@ -1,4 +1,4 @@
-import type { AuditTarget } from "./AuditTarget";
+import type { AuditTarget } from "./AuditTarget.js";
 
 export function normalizeTarget(target: AuditTarget):number[] {
     switch (target.kind) {
