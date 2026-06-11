@@ -7,8 +7,10 @@ import { createSamplers } from "../../index.js";
 import { printHelp } from "./help-command.js";
 import { type AppConfig, loadConfig } from "../../config/config.js";
 import { EmpiricalEnergyReaderOptions } from "../../index.js";
-import type { AuditTarget } from "../../index.js";
-
+import {
+    buildAuditTarget,
+    formatAuditTarget,
+} from "./audit-target.js";
 
 
 //parameter resolution order
@@ -30,35 +32,7 @@ function parseOptionalNumber(value: string | undefined): number | undefined {
   return value === undefined ? undefined : Number(value);
 }
 
-function buildAuditTarget(pids: number[]): AuditTarget {
-  if (pids.length === 0) {
-    throw new Error("Missing target: use --pid <pid> or --spawn \"cmd\"");
-  }
 
-  if (pids.length === 1) {
-    const pid = pids[0];
-
-    if (pid === undefined) {
-      throw new Error("Missing target: use --pid <pid> or --spawn \"cmd\"");
-    }
-
-    return {
-      kind: "process",
-      pid,
-    };
-  }
-
-  return {
-    kind: "process-group",
-    pids,
-  };
-}
-
-function formatAuditTarget(pids: number[]): string {
-  return pids.length === 1
-    ? `PID:${pids[0]}`
-    : `PIDs:${pids.join(",")}`;
-}
 
 export async function auditCommand(argv = process.argv.slice(2)): Promise<void> {
 
