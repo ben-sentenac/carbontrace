@@ -116,3 +116,26 @@ test("audit ends with process_died when single target dies", async () => {
 
     assert.equal(result.meta?.endReason, "process_died");
 });
+
+test("audit ends with duration for a live process group", async () => {
+    const result = await audit(
+        createAuditOptions({
+            pid: 123,
+            target: {
+                kind: "process-group",
+                pids: [123, 456],
+            },
+            samplers: createSamplers([
+                processSample(123, 1n),
+                processSample(456, 1n),
+            ]),
+        }),
+    );
+
+    assert.equal(result.pid, 123);
+    assert.deepEqual(result.targetPids, [123, 456]);
+
+    assert.equal(result.meta?.endReason, "duration");
+    assert.equal(result.meta?.targetProcessCount, 2);
+    assert.equal(result.meta?.processDeadSamples, 0);
+});
