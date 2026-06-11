@@ -25,9 +25,9 @@ async function main(argv: string[] = process.argv.slice(2)): Promise<void> {
 
   const [command = 'help', ...options] = argv;
 
-  const jasonOutput = options.includes("--json");
+  const jsonOutput = options.includes("--json");
 
-  if (!jasonOutput) {
+  if (!jsonOutput) {
     logger.paint("============================", "blue");
     logger.paint("CarbonTrace v 0.0.1", "green");
     logger.paint("============================\n", "blue");

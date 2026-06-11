@@ -300,7 +300,7 @@ export async function auditCommand(argv = process.argv.slice(2)): Promise<void> 
   console.log("\nCPU Energy Audit (bounded)");
   console.log("\n--------------------------\n");
   console.log(new Date().toLocaleDateString());
-  console.log(`Target: ${targetLabel}`);
+  console.log(`Target: ${renderedTarget}`);
   console.log(`Duration: ${result.durationSeconds.toFixed(2)} s`);
   console.log("\n---------ENERGY-----------\n");
   console.log(`Source: ${energyReader.mode}`);
