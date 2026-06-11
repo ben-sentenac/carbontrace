@@ -2,8 +2,10 @@ import { collectSamples, type Samplers } from "../sampling/sampling.js";
 import { AuditAccumulator } from "./AuditAccumulator.js";
 import { fixedRateTicks } from "../timers/scheduler.js";
 import { NS_PER_MS, nowNs } from "../timers/timing.js";
-import type { AuditTarget } from "./AuditTarget.js";
 import { normalizeTarget } from "./normalizeTarget.js";
+
+import type { AuditTarget } from "./AuditTarget.js";
+
 
 function nsToMs(ns: bigint): number {
     return Number(ns) / Number(NS_PER_MS);
@@ -175,7 +177,9 @@ export async function audit(options: AuditOptions): Promise<AuditResult> {
                 const error = samples.processCpu.error;
                 if (!firstProcessError) firstProcessError = error;
 
-                if (error === "file_not_found") {
+                const shouldStopOnProcessDeath = pids.length === 1 && error === "file_not_found";
+
+                if (shouldStopOnProcessDeath) {
                     endReason = "process_died";
                     break;
                 }
