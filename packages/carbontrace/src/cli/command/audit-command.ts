@@ -7,6 +7,10 @@ import { createSamplers } from "../../index.js";
 import { printHelp } from "./help-command.js";
 import { type AppConfig, loadConfig } from "../../config/config.js";
 import { EmpiricalEnergyReaderOptions } from "../../index.js";
+import {
+    buildAuditTarget,
+    formatAuditTarget,
+} from "./audit-target.js";
 
 
 //parameter resolution order
@@ -22,9 +26,13 @@ import { EmpiricalEnergyReaderOptions } from "../../index.js";
 
 //TODO when -v dispaly source or options (via cli or via config)
 
+
+
 function parseOptionalNumber(value: string | undefined): number | undefined {
   return value === undefined ? undefined : Number(value);
 }
+
+
 
 export async function auditCommand(argv = process.argv.slice(2)): Promise<void> {
 
@@ -40,7 +48,7 @@ export async function auditCommand(argv = process.argv.slice(2)): Promise<void> 
 
       config: { type: "string" },
 
-      pid: { type: "string" },
+      pid: { type: "string", multiple: true },
       spawn: { type: "string" },
 
       pidleW: { type: "string" },// mincpuW
@@ -166,8 +174,15 @@ export async function auditCommand(argv = process.argv.slice(2)): Promise<void> 
       await killGracefully(child!, 1500);
       process.exit(130);
     });
-  } else if (values.pid) {
-    pid = Number(values.pid);
+  } else if (values.pid && values.pid.length > 0) {
+    const pids = values.pid.map(Number);
+
+    for (const pidValue of pids) {
+      if (!Number.isFinite(pidValue) || pidValue <= 1) {
+        throw new Error("--pid must be a valid process id");
+      }
+    }
+    pid = pids[0];
     if (!Number.isFinite(pid) || pid <= 1) {
       throw new Error("--pid must be a valid process id");
     }
@@ -175,7 +190,11 @@ export async function auditCommand(argv = process.argv.slice(2)): Promise<void> 
     throw new Error("Missing target: use --pid <pid> or --spawn \"cmd\"");
   }
 
-  const samplers = await createSamplers(pid, fallback);
+  const targetPids = values.spawn ? [pid] : values.pid?.map(Number) ?? [pid];
+  const target = buildAuditTarget(targetPids);
+  const targetLabel = formatAuditTarget(targetPids);
+
+  const samplers = await createSamplers(target, fallback);
 
   //--- optionnal context in verbose mode
 
@@ -195,7 +214,7 @@ export async function auditCommand(argv = process.argv.slice(2)): Promise<void> 
   }
 
 
-  if (verbose) {
+  if (verbose && !jsonOutput) {
     if (values.config) console.log(`Config: ${values.config}`);
 
     console.log(`Energy source: ${energyReader.mode.toUpperCase()}`);
@@ -217,12 +236,16 @@ export async function auditCommand(argv = process.argv.slice(2)): Promise<void> 
     console.log("");
   }
 
-  console.log(`Starting audit for PID:${pid}...please wait`);
+  if(!jsonOutput) {
+    console.log(`Starting audit for ${targetLabel}...please wait`);
+  }
 
+  
   // run audit
 
   const result = await audit({
     pid,
+    target,
     durationSeconds,
     tickMs,
     samplers,
@@ -231,6 +254,8 @@ export async function auditCommand(argv = process.argv.slice(2)): Promise<void> 
     debugMeta,
     signal: controller.signal
   });
+
+  const renderedTarget = formatAuditTarget(result.targetPids);
 
   if (child && !values.keepAlive) {
     //kill
@@ -242,29 +267,31 @@ export async function auditCommand(argv = process.argv.slice(2)): Promise<void> 
     return;
   }
 
+
+
   // 5) print result
   console.log("==============================");
   console.log("\nCPU Energy Audit (bounded)");
   console.log("\n--------------------------\n");
   console.log(new Date().toLocaleDateString());
-  console.log(`PID: ${result.pid}`);
+  console.log(`Target: ${renderedTarget}`);
   console.log(`Duration: ${result.durationSeconds.toFixed(2)} s`);
   console.log("\n---------ENERGY-----------\n");
   console.log(`Source: ${energyReader.mode}`);
   console.log(`Host CPU energy: ${result.hostCpuEnergyJoules.toFixed(3)} J`);
-  console.log(`Process CPU energy: ${result.processCpuEnergyJoules.toFixed(3)} J`);
-  console.log(`Process energy share: ${(result.processCpuEnergyShare * 100).toFixed(2)} %`);
+  console.log(`Target CPU energy: ${result.processCpuEnergyJoules.toFixed(3)} J`);
+  console.log(`Target energy share: ${(result.processCpuEnergyShare * 100).toFixed(2)} %`);
   console.log("\n-----------POWER----------\n");
   console.log(`Average CPU Power:`);
   console.log(`Host avg CPU power: ${result.hostCpuEnergyJoules / result.durationSeconds} W`);
-  console.log(`Process avg CPU power: ${result.processCpuEnergyJoules / result.durationSeconds} W`);
+  console.log(`Target avg CPU power: ${result.processCpuEnergyJoules / result.durationSeconds} W`);
   console.log("\n-----------CARBON---------\n");
   console.log(`CPU Carbon Footprint:`);
   console.log(`Emission Factor: ${emissionFactor} gCO2e/kWh`);
   console.log(`Host CPU carbon footprint: ${result.hostCpuCarbon_gCO2e.toFixed(6)} gCO2e`);
-  console.log(`Process CPU carbon footprint: ${result.processCpuCarbon_gCO2e.toFixed(6)} gCO2e`);
+  console.log(`Target CPU carbon footprint: ${result.processCpuCarbon_gCO2e.toFixed(6)} gCO2e`);
   console.log("\n--------------------------\n");
-  console.log(`Process active: ${result.isActive ? "yes" : "no"}`);
+  console.log(`Target active: ${result.isActive ? "yes" : "no"}`);
   console.log("\n--------------------------\n");
   if (debugMeta && result.meta) {
     console.log("\nDebug meta:");

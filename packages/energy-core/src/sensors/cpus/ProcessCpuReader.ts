@@ -39,7 +39,7 @@ interface ProcessStatErrorSnapshot {
     error: string;
 }
 
-type ProcessStatSnapshot =
+export type ProcessStatSnapshot =
     | ProcessStatSuccessSnapshot
     | ProcessStatErrorSnapshot;
 

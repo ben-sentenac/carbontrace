@@ -2,6 +2,9 @@ import { collectSamples, type Samplers } from "../sampling/sampling.js";
 import { AuditAccumulator } from "./AuditAccumulator.js";
 import { fixedRateTicks } from "../timers/scheduler.js";
 import { NS_PER_MS, nowNs } from "../timers/timing.js";
+import { normalizeTarget } from "./normalizeTarget.js";
+
+import type { AuditTarget } from "./AuditTarget.js";
 
 
 function nsToMs(ns: bigint): number {
@@ -12,6 +15,7 @@ const JOULES_PER_KWH = 3_600_000;
 
 export interface AuditOptions {
     pid: number;
+    target?: AuditTarget;
     durationSeconds: number;
     tickMs?: number;
 
@@ -22,13 +26,15 @@ export interface AuditOptions {
     debugTiming: boolean;
     debugMeta?: boolean;
 
-    signal?: AbortSignal
+    signal?: AbortSignal;
+
 }
 
 export type EndReason = "duration" | "aborted" | "process_died";
 
 export interface AuditResult {
     pid: number;
+    targetPids: number[];
     durationSeconds: number;
 
     hostCpuEnergyJoules: number;
@@ -44,12 +50,19 @@ export interface AuditResult {
         tickCount: number;
         skippedPeriodsTotal: bigint | string;
 
+        targetPids: number[];
+        targetProcessCount: number;
+
         energyPrimedSamples: number;
         cpuPrimedSamples: number;
 
         processOkSamples: number;
         processErrorSamples: number;
         firstProcessError: string | null;
+
+        processAliveSamples: number;
+        processDeadSamples: number;
+        processPrimedSamples: number;
 
         totalHostCpuActiveTicks?: bigint | string;
         totalProcessCpuActiveTicks?: bigint | string;
@@ -58,14 +71,20 @@ export interface AuditResult {
 
         // petits hints utiles pour comprendre un "0 J"
         notes?: string[];
+
+
     };
 }
 
-
+function resolveAuditTarget(options: AuditOptions): AuditTarget {
+    return options.target ?? {
+        kind: "process",
+        pid: options.pid,
+    };
+}
 
 export async function audit(options: AuditOptions): Promise<AuditResult> {
     const {
-        pid,
         durationSeconds,
         tickMs = 1000,
         samplers,
@@ -74,6 +93,14 @@ export async function audit(options: AuditOptions): Promise<AuditResult> {
         debugMeta = false,
         signal,
     } = options;
+
+    const target = resolveAuditTarget(options);
+    const pids = normalizeTarget(target);
+    const pid = pids[0];
+
+    if (pid === undefined) {
+        throw new Error("audit target must contain at least one pid");
+    }
 
     //start audit
     const startTimeNs = process.hrtime.bigint();
@@ -92,6 +119,10 @@ export async function audit(options: AuditOptions): Promise<AuditResult> {
     let processOkSamples = 0;
     let processErrorSamples = 0;
 
+    let processAliveSamples = 0;
+    let processDeadSamples = 0;
+    let processPrimedSamples = 0;
+
     let firstProcessError: string | null = null;
 
     let endReason: EndReason = "duration";
@@ -107,7 +138,7 @@ export async function audit(options: AuditOptions): Promise<AuditResult> {
     })) {
 
         // condition fin de loop 
-        if (options.signal?.aborted) {
+        if (signal?.aborted) {
             endReason = "aborted";
             break;
         }
@@ -119,13 +150,18 @@ export async function audit(options: AuditOptions): Promise<AuditResult> {
         //for debugMeta
         tickCount++;
         skippedPeriodsTotal += tick.skippedPeriods;
-        //
 
         const workStartNs = nowNs();//pour debug durée travail 
 
         const samples = await collectSamples(samplers, tick.startNs);
 
         //--meta stats (for -vv)
+
+        if (samples.processCpuGroup) {
+            processAliveSamples += samples.processCpuGroup.aliveProcesses;
+            processDeadSamples += samples.processCpuGroup.deadProcesses;
+            processPrimedSamples += samples.processCpuGroup.primedProcesses;
+        }
 
         if (samples.energy?.ok && samples.energy.primed) energyPrimedSamples++;
 
@@ -140,7 +176,9 @@ export async function audit(options: AuditOptions): Promise<AuditResult> {
                 const error = samples.processCpu.error;
                 if (!firstProcessError) firstProcessError = error;
 
-                if (error === "file_not_found") {
+                const shouldStopOnProcessDeath = pids.length === 1 && error === "file_not_found";
+
+                if (shouldStopOnProcessDeath) {
                     endReason = "process_died";
                     break;
                 }
@@ -161,9 +199,11 @@ export async function audit(options: AuditOptions): Promise<AuditResult> {
                     : undefined,
 
             processCpuActiveTicks:
-                samples.processCpu && samples.processCpu.ok
-                    ? samples.processCpu.cpuTicks.deltaActive
-                    : undefined,
+                samples.processCpuGroup //if multi pid
+                    ? samples.processCpuGroup.totalDeltaActiveTicks
+                    : samples.processCpu && samples.processCpu.ok //else single pid
+                        ? samples.processCpu.cpuTicks.deltaActive
+                        : undefined,
         });
 
         const workEndNs = nowNs();
@@ -224,7 +264,7 @@ export async function audit(options: AuditOptions): Promise<AuditResult> {
     if (!isActive) {
 
         if (processErrorSamples > 0) {
-            notes.push(`Process sampling errors=${processErrorSamples} (first=${firstProcessError ?? "unkown"})`);
+            notes.push(`Process sampling errors=${processErrorSamples} (first=${firstProcessError ?? "unknown"})`);
             if (firstProcessError === "file_not_found") {
                 notes.push("process likely ended before a second sample (priming) could be taken");
                 notes.push("tip: use --spawn for short-lived commands or lower --tick (e.g. 100ms)");
@@ -244,6 +284,7 @@ export async function audit(options: AuditOptions): Promise<AuditResult> {
 
     return {
         pid,
+        targetPids: pids,
         durationSeconds: effectiveDuration,
 
         hostCpuEnergyJoules,
@@ -259,16 +300,25 @@ export async function audit(options: AuditOptions): Promise<AuditResult> {
             tickCount,
             skippedPeriodsTotal: skippedPeriodsTotal.toString(),
 
+            targetPids: pids,
+            targetProcessCount: pids.length,
+
             energyPrimedSamples,
             cpuPrimedSamples,
 
             processOkSamples,
             processErrorSamples,
+
+            processAliveSamples,
+            processDeadSamples,
+            processPrimedSamples,
+
             firstProcessError,
             totalHostCpuActiveTicks: totalHostCpuActiveTicks.toString(),
             totalProcessCpuActiveTicks: totalProcessCpuActiveTicks.toString(),
 
-            endReason
+            endReason,
+            notes,
 
         } : undefined
     };
