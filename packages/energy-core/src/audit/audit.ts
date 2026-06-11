@@ -138,7 +138,7 @@ export async function audit(options: AuditOptions): Promise<AuditResult> {
     })) {
 
         // condition fin de loop 
-        if (options.signal?.aborted) {
+        if (signal?.aborted) {
             endReason = "aborted";
             break;
         }
@@ -150,7 +150,6 @@ export async function audit(options: AuditOptions): Promise<AuditResult> {
         //for debugMeta
         tickCount++;
         skippedPeriodsTotal += tick.skippedPeriods;
-        //
 
         const workStartNs = nowNs();//pour debug durée travail 
 
@@ -265,7 +264,7 @@ export async function audit(options: AuditOptions): Promise<AuditResult> {
     if (!isActive) {
 
         if (processErrorSamples > 0) {
-            notes.push(`Process sampling errors=${processErrorSamples} (first=${firstProcessError ?? "unkown"})`);
+            notes.push(`Process sampling errors=${processErrorSamples} (first=${firstProcessError ?? "unknown"})`);
             if (firstProcessError === "file_not_found") {
                 notes.push("process likely ended before a second sample (priming) could be taken");
                 notes.push("tip: use --spawn for short-lived commands or lower --tick (e.g. 100ms)");
