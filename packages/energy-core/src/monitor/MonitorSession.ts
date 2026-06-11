@@ -36,9 +36,8 @@ export class MonitorSession {
     get isFull(): boolean {
         return this.samples.isFull;
     }
-
-    //todo optimize to avoid array copy
+    
     get latestSample(): MonitorSample | undefined {
-        return this.samples.values().at(-1);
+        return this.samples.latest();
     }
 }
