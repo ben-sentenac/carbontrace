@@ -48,3 +48,17 @@ test("MonitorSession can be cleared", () => {
 
     assert.deepEqual(session.snapshot(), []);
 });
+
+test("MonitorSession exposes buffer state", () => {
+    const session = new MonitorSession({ capacity: 2 });
+
+    assert.equal(session.size, 0);
+    assert.equal(session.capacity, 2);
+    assert.equal(session.isFull, false);
+
+    session.push(sample(1));
+    session.push(sample(2));
+
+    assert.equal(session.size, 2);
+    assert.equal(session.isFull, true);
+});

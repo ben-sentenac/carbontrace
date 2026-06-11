@@ -9,19 +9,31 @@ export interface MonitorSessionOptions {
 export class MonitorSession {
     readonly samples: RingBuffer<MonitorSample>;
 
-    constructor(options:MonitorSessionOptions) {
+    constructor(options: MonitorSessionOptions) {
         this.samples = new RingBuffer<MonitorSample>(options.capacity);
     }
 
-    push(sample: MonitorSample):void {
+    push(sample: MonitorSample): void {
         this.samples.push(sample);
     }
 
-    snapshot():MonitorSample[] {
+    snapshot(): MonitorSample[] {
         return this.samples.values();
     }
 
-    clear():void {
+    clear(): void {
         this.samples.clear();
+    }
+
+    get size(): number {
+        return this.samples.size;
+    }
+
+    get capacity(): number {
+        return this.samples.capacity;
+    }
+
+    get isFull(): boolean {
+        return this.samples.isFull;
     }
 }
