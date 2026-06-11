@@ -47,6 +47,18 @@ function createAuditOptions(partial:Partial<AuditOptions>):AuditOptions {
     };
 }
 
+function createDeadSamplers(): Samplers {
+    return {
+        energyReader: undefined,
+        cpuReader: undefined,
+        processCpuReaders: [
+            {
+                sample: async () => deadProcessSample(),
+            },
+        ] as Samplers["processCpuReaders"],
+    };
+}
+
 test("audit ends duration for a live single process", async () => {
 
     const result = await audit(
@@ -81,4 +93,26 @@ test("audit keeps running for a process group when one process is dead", async (
     assert.equal(result.meta?.endReason, "duration");
     assert.equal(result.meta?.targetProcessCount, 2);
     assert.ok((result.meta?.processDeadSamples ?? 0) > 0);
+});
+
+
+test("audit ends with process_died when single target dies", async () => {
+    const result = await audit(
+        createAuditOptions({
+            pid: 123,
+            target: {
+                kind: "process",
+                pid: 123,
+            },
+            samplers: createDeadSamplers(),
+        }),
+    );
+
+    assert.equal(result.pid, 123);
+    assert.deepEqual(result.targetPids, [123]);
+
+    assert.equal(result.meta?.targetProcessCount, 1);
+    assert.ok((result.meta?.processDeadSamples ?? 0) > 0);
+
+    assert.equal(result.meta?.endReason, "process_died");
 });
