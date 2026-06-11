@@ -318,7 +318,8 @@ export async function audit(options: AuditOptions): Promise<AuditResult> {
             totalHostCpuActiveTicks: totalHostCpuActiveTicks.toString(),
             totalProcessCpuActiveTicks: totalProcessCpuActiveTicks.toString(),
 
-            endReason
+            endReason,
+            notes,
 
         } : undefined
     };
