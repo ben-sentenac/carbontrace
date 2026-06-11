@@ -5,13 +5,13 @@ import type { Samplers } from "../sampling/sampling.js";
 
 
 
-function processSample(pid:number, deltaActive: bigint) {
+function processSample(pid: number, deltaActive: bigint) {
     return {
         ok: true as const,
-        primed:true,
+        primed: true,
         pid,
-        cpuTicks:{
-            unit:"jiffies" as const,
+        cpuTicks: {
+            unit: "jiffies" as const,
             deltaActive
         }
     }
@@ -19,30 +19,30 @@ function processSample(pid:number, deltaActive: bigint) {
 
 function deadProcessSample() {
     return {
-        ok:false as const,
+        ok: false as const,
         error: "file_not_found"
     };
 }
 
-function createSamplers(samples:Array<unknown>):Samplers {
+function createSamplers(samples: Array<unknown>): Samplers {
     return {
-        energyReader:undefined,
-        cpuReader:undefined,
+        energyReader: undefined,
+        cpuReader: undefined,
         processCpuReaders: samples.map(sample => ({
             sample: async () => sample,
         })) as Samplers["processCpuReaders"],
     };
 }
 
-function createAuditOptions(partial:Partial<AuditOptions>):AuditOptions {
+function createAuditOptions(partial: Partial<AuditOptions>): AuditOptions {
     return {
-        pid:123,
-        durationSeconds:0.05,
-        tickMs:10,
-        samplers:createSamplers([processSample(123,1n)]),
-        emissionFactor_gCO2ePerKWh:50,
-        debugTiming:false,
-        debugMeta:true,
+        pid: 123,
+        durationSeconds: 0.05,
+        tickMs: 10,
+        samplers: createSamplers([processSample(123, 1n)]),
+        emissionFactor_gCO2ePerKWh: 50,
+        debugTiming: false,
+        debugMeta: true,
         ...partial
     };
 }
@@ -59,13 +59,17 @@ function createDeadSamplers(): Samplers {
     };
 }
 
+function idleProcessSample(pid: number) {
+    return processSample(pid, 0n);
+}
+
 test("audit ends duration for a live single process", async () => {
 
     const result = await audit(
         createAuditOptions({
-            pid:123,
-            target:{ kind:"process", pid:123},
-            samplers:createSamplers([processSample(123,1n)])
+            pid: 123,
+            target: { kind: "process", pid: 123 },
+            samplers: createSamplers([processSample(123, 1n)])
         })
     );
 
@@ -138,4 +142,47 @@ test("audit ends with duration for a live process group", async () => {
     assert.equal(result.meta?.endReason, "duration");
     assert.equal(result.meta?.targetProcessCount, 2);
     assert.equal(result.meta?.processDeadSamples, 0);
+});
+
+test("audit adds a meta note when process stays idle", async () => {
+    const result = await audit(
+        createAuditOptions({
+            pid: 123,
+            target: {
+                kind: "process",
+                pid: 123,
+            },
+            samplers: createSamplers([
+                idleProcessSample(123),
+            ]),
+        }),
+    );
+
+    assert.equal(result.meta?.endReason, "duration");
+
+    assert.ok(
+        result.meta?.notes?.some((note) =>
+            note.includes("process sampled ok but stayed idle"),
+        ),
+    );
+});
+
+test("audit returns a complete result structure", async () => {
+    const result = await audit(
+        createAuditOptions({
+            target: {
+                kind: "process",
+                pid: 123,
+            },
+        }),
+    );
+
+    assert.ok(result.meta);
+    assert.ok(result.targetPids);
+    assert.ok(result.durationSeconds >= 0);
+
+    assert.equal(typeof result.processCpuEnergyJoules, "number");
+    assert.equal(typeof result.hostCpuEnergyJoules, "number");
+
+    assert.ok(result.meta?.targetProcessCount > 0);
 });
