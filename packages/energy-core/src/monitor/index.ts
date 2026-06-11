@@ -4,3 +4,4 @@ export * from "./MonitorSession.js";
 export * from "./createMonitorSample.js";
 export * from "./MonitorTickResult.js";
 export * from "./createMonitorTick.js";
+export * from "./collectMonitorSample.js";
