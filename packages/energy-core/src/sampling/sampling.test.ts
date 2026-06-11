@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { collectSamples, type Samplers } from "./sampling.js";
+import { collectSamples, createSamplers, type Samplers } from "./sampling.js";
 
 
 function createProcessCpuSample(deltaActive: bigint) {
@@ -85,4 +85,42 @@ test("collectSamples handles dead process samples in processCpuGroup", async () 
     assert.equal(samples.processCpuGroup?.deadProcesses, 1);
     assert.equal(samples.processCpuGroup?.primedProcesses, 1);
     assert.equal(samples.processCpuGroup?.totalDeltaActiveTicks, 3n);
+});
+
+test("createSamplers creates one process cpu reader for a process target", async () => {
+    const samplers = await createSamplers(
+        {
+            kind: "process",
+            pid: 123,
+        },
+        undefined,
+    );
+
+    assert.equal(samplers.processCpuReaders?.length, 1);
+});
+
+test("createSamplers creates one process cpu reader per process group pid", async () => {
+    const samplers = await createSamplers(
+        {
+            kind: "process-group",
+            pids: [123, 456],
+        },
+        undefined,
+    );
+
+    assert.equal(samplers.processCpuReaders?.length, 2);
+});
+
+test("createSamplers rejects an empty process group target", async () => {
+    await assert.rejects(
+        () =>
+            createSamplers(
+                {
+                    kind: "process-group",
+                    pids: [],
+                },
+                undefined,
+            ),
+        /sampler target must contain at least one pid/,
+    );
 });
