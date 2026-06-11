@@ -16,7 +16,6 @@ import type { ProcessCpuGroupSnapshot } from "../sensors/cpus/ProcessCpuGroupSna
 export interface Samplers {
     energyReader?: EnergyReader;
     cpuReader?: CpuReader;
-    processCpuReader?: ProcessCpuReader;
     processCpuReaders?: ProcessCpuReader[];  // futur
 };
 
@@ -36,12 +35,9 @@ function finiteNumberOrUndefined(value: number | undefined): number | undefined 
 
 export async function createSamplers(target: AuditTarget, fallbackOptions: FallBackOptions): Promise<Samplers> {
     const pids = normalizeTarget(target);
-    const pid = pids[0];
-
-    if (pid === undefined) {
+    if (pids.length === 0) {
         throw new Error("sampler target must contain at least one pid");
     }
-
     const probe = await raplProbe();
     const fb = fallbackOptions;
     return {
@@ -54,7 +50,6 @@ export async function createSamplers(target: AuditTarget, fallbackOptions: FallB
             }
         }),
         cpuReader: new CpuReader({}),
-        processCpuReader: new ProcessCpuReader({ pid }),
         processCpuReaders: pids.map(
             pid => new ProcessCpuReader({ pid })
         ),
@@ -62,25 +57,21 @@ export async function createSamplers(target: AuditTarget, fallbackOptions: FallB
 }
 
 export async function collectSamples(samplers: Samplers, nowNs: bigint): Promise<Samples> {
-    const { energyReader, cpuReader, processCpuReader,processCpuReaders } = samplers;
-    const [energy, cpu, processCpu] = await Promise.all(
-        [
-            energyReader ? energyReader.sample(nowNs) : Promise.resolve(null),
-            cpuReader ? cpuReader.sample(nowNs) : Promise.resolve(null),
-            processCpuReader ? processCpuReader.sample() : Promise.resolve(null)
+    const { energyReader, cpuReader, processCpuReaders } = samplers;
 
-        ]
-    );
+    const [energy, cpu, processCpus] = await Promise.all([
+        energyReader ? energyReader.sample(nowNs) : Promise.resolve(null),
+        cpuReader ? cpuReader.sample(nowNs) : Promise.resolve(null),
+        processCpuReaders
+            ? Promise.all(processCpuReaders.map((reader) => reader.sample()))
+            : Promise.resolve(undefined),
+    ]);
 
-    const processCpus = processCpuReaders
-    ? await Promise.all(
-        processCpuReaders.map((reader) => reader.sample())
-      )
-    : undefined;
+    const processCpu = processCpus?.[0] ?? null;
 
     const processCpuGroup = processCpus
-    ? aggregateProcessCpuSnapshots(processCpus)
-    : undefined;
+        ? aggregateProcessCpuSnapshots(processCpus)
+        : undefined;
 
-    return { energy, cpu, processCpu, processCpus,processCpuGroup };
+    return { energy, cpu, processCpu, processCpus, processCpuGroup };
 }
