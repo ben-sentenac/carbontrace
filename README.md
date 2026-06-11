@@ -1,285 +1,307 @@
 # CarbonTrace
+
 ![Node.js CI](https://github.com/ben-sentenac/carbontrace/actions/workflows/carbontrace.yaml/badge.svg)
 
-# CarbonTrace
-
-> **CPU energy auditing for Node.js processes on Linux.**  
-> Measure real CPU energy consumption and carbon footprint of any process, by PID or by spawning a command.
-
----
-
-## What it does
-
-`CarbonTrace` measures the **CPU energy** consumed by a specific process over a given duration, and converts that into a **carbon footprint** (gCO2e).
-
-It reads energy directly from the Linux RAPL hardware interface when available, and falls back to an empirical estimation model (based on CPU load × power profile) when RAPL is not accessible (VMs, unprivileged containers, AMD systems without RAPL exposure).
-
-### Scope
-
-| Measured | Not measured (yet) |
-|---|---|
-| ✅ CPU energy (host + process share) | ❌ RAM |
-| ✅ Process CPU attribution via `/proc` | ❌ Network I/O |
-| ✅ Carbon footprint (gCO2e) | ❌ Disk I/O |
-| ✅ RAPL hardware source or empirical fallback | ❌ GPU |
+> **CPU energy and carbon auditing for Linux processes.**
+>
+> Measure CPU energy consumption and carbon footprint for one or multiple processes using Linux RAPL when available, with an empirical fallback when hardware counters are unavailable.
 
 ---
 
-## Requirements
+# Features
 
-- **Linux** (uses `/proc/stat`, `/proc/<pid>/stat`, `/sys/class/powercap`)
-- **Node.js** >= 18 (ESM, `BigInt`, `node:util/parseArgs`)
-- For RAPL: Intel or AMD CPU with powercap exposed, readable `energy_uj` files  
-  (may require `sudo` or `chmod o+r /sys/class/powercap/*/energy_uj`)
+Current capabilities:
+
+*  CPU energy audit
+*  Carbon footprint estimation
+*  Linux RAPL support
+*  Empirical fallback model
+*  Single process audit
+*  Multi-process audit
+*  Machine-readable JSON output
+*  Programmatic API
+
+Planned:
+
+*  Continuous monitor
+*  HTTP API
+*  Dashboard
 
 ---
 
-## Installation
+# What it does
+
+CarbonTrace measures the CPU energy consumed by one or multiple Linux processes and converts that energy into a carbon footprint (gCO2e).
+
+It reads energy directly from the Linux RAPL interface when available and falls back to an empirical model when RAPL is unavailable (VMs, containers, unsupported systems).
+
+## Scope
+
+| Measured                     | Not measured (yet) |
+| ---------------------------- | ------------------ |
+|  CPU energy                 |  RAM              |
+|  Process CPU attribution    |  Disk I/O         |
+|  Carbon footprint           |  Network I/O      |
+|  RAPL or empirical fallback | GPU              |
+
+---
+
+# Requirements
+
+* Linux
+* Node.js >= 18
+* `/proc`
+* `/sys/class/powercap` for RAPL support
+
+RAPL permissions may require root privileges or read access to `energy_uj`.
+
+---
+
+# Installation
 
 ```bash
-npm install -g @carbontrace/cli
+npm install -g @carbontrace/carbontrace
 ```
 
-Or as a dev dependency in your project:
+or
 
 ```bash
-npm install --save-dev @carbontrace/core
+npm install @carbontrace/energy-core
 ```
 
 ---
 
-## CLI Usage
+# CLI Usage
 
-### Audit an existing process by PID
+## Audit a process
+
+```bash
+carbontrace audit --pid 1234
+```
+
+## Audit multiple processes
+
+```bash
+carbontrace audit --pid 1234 --pid 5678
+```
+
+## Custom duration
 
 ```bash
 carbontrace audit --pid 1234 --duration 10
 ```
 
-### Spawn and audit a command
+## Custom sampling interval
 
 ```bash
-carbontrace audit --spawn "node my-script.js --iterations 1000000" --duration 30
+carbontrace audit --pid 1234 --tick 100
 ```
 
-### With an empirical fallback (when RAPL is unavailable)
+## JSON output
 
 ```bash
-# Recommended: provide measured idle/max power for your CPU
-carbontrace audit --pid 1234 --pidleW 8 --pmaxW 65 --duration 10
-
-# Or use TDP as a rough estimate
-carbontrace audit --pid 1234 --tdp 65 --duration 10
+carbontrace audit --pid 1234 --json
 ```
 
-### Use a config file
+## Empirical fallback
 
 ```bash
-carbontrace audit --pid 1234 --config ./CarbonTrace.config.json
+carbontrace audit \
+    --pid 1234 \
+    --pidleW 8 \
+    --pmaxW 65
+```
+
+or
+
+```bash
+carbontrace audit \
+    --pid 1234 \
+    --tdp 65
 ```
 
 ---
 
-## Configuration file
+# CLI Options
 
-`carbontrace.config.json`
-
-```json
-{
-  "emissionFactor": {
-    "country": "FR",
-    "factor": 52
-  },
-  "fallback": {
-    "pidleWatts": 8,
-    "pmaxWatts": 65
-  }
-}
-```
-
-The emission factor defaults to **475 gCO2e/kWh** (EU average) if not specified.  
-France-specific value: ~52 gCO2e/kWh (nuclear-heavy grid).
+| Option             | Description                       |
+| ------------------ | --------------------------------- |
+| `--pid <pid>`      | Target PID (repeatable)           |
+| `--duration <s>`   | Audit duration                    |
+| `--tick <ms>`      | Sampling interval                 |
+| `--pidleW <w>`     | Idle power for empirical model    |
+| `--pmaxW <w>`      | Maximum power for empirical model |
+| `--tdp <w>`        | TDP fallback                      |
+| `--ef <gCO2e/kWh>` | Emission factor                   |
+| `--json`           | JSON output                       |
+| `-v`               | Verbose                           |
+| `-vv`              | Verbose + debug metadata          |
+| `--debug-meta`     | Show raw metadata                 |
+| `--debug-timing`   | Scheduler timings                 |
 
 ---
 
-## CLI Options
+# Programmatic API
 
-| Option | Description | Default |
-|---|---|---|
-| `--pid <n>` | Target process PID | — |
-| `--spawn "<cmd>"` | Spawn and monitor a command | — |
-| `--duration <s>` | Audit duration in seconds | `10` |
-| `--tick <ms>` | Sampling interval in milliseconds | `1000` |
-| `--pidleW <w>` | CPU idle power in Watts (fallback) | — |
-| `--pmaxW <w>` | CPU max power in Watts (fallback) | — |
-| `--tdp <w>` | CPU TDP in Watts (coarse fallback) | — |
-| `--ef <gCO2e/kWh>` | Emission factor override | `475` |
-| `--config <path>` | Path to config file | `CarbonTrace.config.json` |
-| `--json` | Output raw JSON result | `false` |
-| `-v` / `--verbose` | Show energy source and parameters | — |
-| `-vv` | Verbose + debug metadata | — |
-| `--debug-meta` | Show raw tick metadata | — |
-| `--debug-timing` | Show per-tick scheduler timing | — |
-| `--keep-alive` | Don't kill spawned process after audit | `false` |
+```ts
+import {
+    audit,
+    createSamplers,
+} from "@carbontrace/energy-core";
 
----
+const target = {
+    kind: "process-group",
+    pids: [1234, 5678],
+};
 
-## Example output
-
-```
-Starting audit for PID:12345...please wait
-==============================
-
-CPU Energy Audit (bounded)
-
---------------------------
-
-18/01/2025
-PID: 12345
-Duration: 10.02 s
-
----------ENERGY-----------
-
-Source: rapl
-Host CPU energy: 48.321 J
-Process CPU energy: 3.217 J
-Process energy share: 6.66 %
-
------------POWER----------
-
-Average CPU Power:
-Host avg CPU power: 4.822 W
-Process avg CPU power: 0.321 W
-
------------CARBON---------
-
-CPU Carbon Footprint:
-Emission Factor: 475 gCO2e/kWh
-Host CPU carbon footprint: 0.006378 gCO2e
-Process CPU carbon footprint: 0.000425 gCO2e
-
---------------------------
-
-Process active: yes
-
---------------------------
-CarbonTrace v.0.0.1
-```
-
----
-
-## Programmatic API
-
-```typescript
-import { audit, createSamplers } from "@carbontrace/core";
-
-const samplers = await createSamplers(pid, {
-  pidleWatts: 8,
-  pmaxWatts: 65,
-});
+const samplers = await createSamplers(
+    target,
+    {
+        pidleWatts: 8,
+        pmaxWatts: 65,
+    },
+);
 
 const result = await audit({
-  pid: 1234,
-  durationSeconds: 10,
-  tickMs: 1000,
-  samplers,
-  emissionFactor_gCO2ePerKWh: 52,
-  debugTiming: false,
+    pid: 1234,
+    target,
+    durationSeconds: 10,
+    tickMs: 1000,
+    samplers,
+    emissionFactor_gCO2ePerKWh: 52,
+    debugTiming: false,
 });
 
-console.log(`Process CPU energy: ${result.processCpuEnergyJoules.toFixed(3)} J`);
-console.log(`Carbon: ${result.processCpuCarbon_gCO2e.toFixed(6)} gCO2e`);
+console.log(result.processCpuEnergyJoules);
 ```
 
 ---
 
-## How it works
+# Architecture
 
-```
-/sys/class/powercap  ──► RaplReader      ─┐
-                                           ├──► EnergyReader
-CPU power profile    ──► EmpiricalReader  ─┘         │
-                                                      │
-/proc/stat           ──► CpuReader                    │
-/proc/<pid>/stat     ──► ProcessCpuReader             │
-                                                      │
-                         Scheduler (fixedRateTicks) ──┤
-                                                      │
-                         AuditAccumulator ◄───────────┘
-                                │
-                         AuditResult (J, gCO2e)
-```
+```text
+                    RaplReader
+                         │
+                  EmpiricalReader
+                         │
+                    EnergyReader
+                         │
+ /proc/stat ─────────► CpuReader
+                         │
 
-1. **RAPL probe** — detects available powercap packages at startup
-2. **EnergyReader** — uses RAPL if available, empirical model otherwise
-3. **CpuReader** — reads `/proc/stat` delta ticks (host CPU load)
-4. **ProcessCpuReader** — reads `/proc/<pid>/stat` delta ticks (process CPU load)
-5. **Scheduler** — fixed-rate tick loop with overrun coalescing
-6. **Accumulator** — sums energy deltas and tick deltas across the audit window
-7. **Attribution** — `process_energy = host_energy × (process_ticks / host_ticks)`
+/proc/<pid>/stat ──► ProcessCpuReader[]
+                         │
+                         ▼
+         aggregateProcessCpuSnapshots
+                         │
+                         ▼
+                  processCpuGroup
+                         │
+
+               fixedRateTicks()
+                         │
+
+                AuditAccumulator
+                         │
+
+                    AuditResult
+```
 
 ---
 
-## RAPL permissions
+# How it works
 
-On most Linux systems, RAPL energy files require elevated permissions:
+1. Detect available energy source.
+2. Read host CPU energy.
+3. Read host CPU activity.
+4. Read process CPU activity.
+5. Aggregate process groups.
+6. Attribute process energy share.
+7. Convert energy to carbon footprint.
+
+---
+
+# RAPL permissions
 
 ```bash
-# Check if readable
-ls -la /sys/class/powercap/intel-rapl:0/energy_uj
-
-# Grant read access (requires root, resets on reboot)
-sudo chmod o+r /sys/class/powercap/*/energy_uj
-
-# Permanent fix via udev rule
-echo 'SUBSYSTEM=="powercap", ACTION=="add", RUN+="/bin/chmod o+r %S%p/energy_uj"' \
-  | sudo tee /etc/udev/rules.d/51-rapl.rules
+ls -la /sys/class/powercap/*/energy_uj
 ```
 
-If RAPL is unavailable, the tool automatically falls back to the empirical model.
+Temporary access:
+
+```bash
+sudo chmod o+r /sys/class/powercap/*/energy_uj
+```
+
+Example udev rule:
+
+```bash
+echo 'SUBSYSTEM=="powercap", ACTION=="add", RUN+="/bin/chmod o+r %S%p/energy_uj"' \
+| sudo tee /etc/udev/rules.d/51-rapl.rules
+```
+
+When unavailable, CarbonTrace automatically switches to the empirical model.
 
 ---
 
-## Limitations
+# Limitations
 
-- **Linux only** — relies on `/proc` and `/sys/class/powercap`
-- **CPU only** — RAM, network, disk are not measured
-- **Process attribution is statistical** — based on CPU time share, not hardware-level process isolation
-- **Empirical fallback accuracy** depends on the quality of `--pidleW`/`--pmaxW` values provided; TDP mode is a coarse estimate
-- **RAPL measures package power** — includes uncore components (memory controller, integrated GPU on some CPUs); the process share attribution partially mitigates this
- - No lifecycle analysis
-- Host energy depends on hardware and firmware support (RAPL)
-- Results should not be extrapolated without context
+* Linux only
+* CPU only
+* Process attribution is statistical
+* RAPL support depends on hardware
+* Empirical mode accuracy depends on calibration
+* No lifecycle analysis
+* Results should be interpreted as indicative
 
 ---
 
-## Intended Use Cases
+# Intended Use Cases
 
-- Eco-design audits
+* Eco-design audits
+* Compare implementations
+* Detect CPU-heavy workloads
+* Research
+* Educational purposes
 
-- Comparing implementations
-
-- Identifying CPU-heavy workloads
-
-- Research and experimentation
-
-- Educational purposes
-
-## Non-Goals
-
-- Full application LCA
-
-- Cloud infrastructure accounting
-
-- Cost estimation
-
-- User-facing carbon labels
 ---
 
-## License
+# Non Goals
+
+* Full LCA
+* Cloud accounting
+* Cost estimation
+* User-facing carbon labels
+
+---
+
+# Roadmap
+
+Current:
+
+*  Audit engine
+*  Multi-process support
+*  JSON output
+* Programmatic API
+
+Next:
+
+*  Continuous monitor
+*  Ring buffer
+*  Monitor session
+
+Future:
+
+*  HTTP API
+*  Dashboard
+*  Exporters
+
+---
+
+# License
 
 MIT
 
-**This tool estimates operational CPU emissions only.**
+**CarbonTrace estimates operational CPU emissions only.**
 
 **Results should be interpreted as indicative, not absolute.**
