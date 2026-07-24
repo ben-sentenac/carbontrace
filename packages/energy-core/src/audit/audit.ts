@@ -103,7 +103,7 @@ export async function audit(options: AuditOptions): Promise<AuditResult> {
     }
 
     //start audit
-    const startTimeNs = process.hrtime.bigint();
+    const startTimeNs = nowNs();
     const endTimeNsTarget = startTimeNs + BigInt(Math.floor(durationSeconds * 1e9));
 
     const accumulator = new AuditAccumulator(startTimeNs);
@@ -137,7 +137,7 @@ export async function audit(options: AuditOptions): Promise<AuditResult> {
         signal
     })) {
 
-        // condition fin de loop 
+        // condition fin de loop
         if (signal?.aborted) {
             endReason = "aborted";
             break;
@@ -151,7 +151,7 @@ export async function audit(options: AuditOptions): Promise<AuditResult> {
         tickCount++;
         skippedPeriodsTotal += tick.skippedPeriods;
 
-        const workStartNs = nowNs();//pour debug durée travail 
+        const workStartNs = nowNs();//pour debug durée travail
 
         const samples = await collectSamples(samplers, tick.startNs);
 
@@ -226,7 +226,7 @@ export async function audit(options: AuditOptions): Promise<AuditResult> {
         }
     }
 
-    accumulator.endTimeNs = process.hrtime.bigint();
+    accumulator.endTimeNs = nowNs();
 
     const totals = accumulator.finalize();
 
