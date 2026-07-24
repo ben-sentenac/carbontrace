@@ -9,7 +9,7 @@ export interface EmpiricalEnergyReaderOptions {
     pidleWatts?: number;
     pmaxWatts?: number;
 
-    //TDP mode 
+    //TDP mode
     tdpWatts?: number;
     /**
      * CPU TDP in Watts (approx)
@@ -107,7 +107,7 @@ export class EmpiricalEnergyReader {
         if (!cpuStat || cpuStat.ok === false) {
             return {
                 ok: false,
-                primed: true,
+                primed: false,
                 internalClampedDt: 0,
                 deltaJ: 0,
                 deltaUj: 0,
@@ -127,7 +127,7 @@ export class EmpiricalEnergyReader {
                 wraps: 0
             }
         }
-        
+
         const cpuLoad = clamp01(cpuStat.cpuUtilization ?? 0);
         const dt = cpuStat.internalClampedDt;
 
