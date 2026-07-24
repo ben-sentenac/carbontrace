@@ -2,8 +2,7 @@ import { parseArgs } from "node:util";
 import process from "node:process";
 import path from "node:path";
 import { spawnTarget, killGracefully, extractVerbosity, parsePositiveNumberFromCommand } from "./command-utils.js";
-import { audit } from "../../index.js";
-import { createSamplers } from "../../index.js";
+import { audit, createSamplers } from "../../index.js";
 import { printHelp } from "./help-command.js";
 import { type AppConfig, loadConfig } from "../../config/config.js";
 import { EmpiricalEnergyReaderOptions } from "../../index.js";
@@ -140,7 +139,7 @@ export async function auditCommand(argv = process.argv.slice(2)): Promise<void> 
             "missing";
 
 
-  //merge with config 
+  //merge with config
 
   const configFallback: Partial<EmpiricalEnergyReaderOptions> = config?.fallback ?? {};
   const fallback = {
@@ -207,7 +206,7 @@ export async function auditCommand(argv = process.argv.slice(2)): Promise<void> 
   //if calibration not set in options or in config file error
   if (!energyReader.isReady) {
     if (child) killGracefully(child, 1000);
-    const error = `Energy measurement unavailable: 
+    const error = `Energy measurement unavailable:
     RAPL not available and fallback not configured.\n
     Provide --pidleW/--pmaxW (recommended), or --tdp, or use --config <file>.`
     throw new Error(error);
@@ -240,7 +239,7 @@ export async function auditCommand(argv = process.argv.slice(2)): Promise<void> 
     console.log(`Starting audit for ${targetLabel}...please wait`);
   }
 
-  
+
   // run audit
 
   const result = await audit({
