@@ -160,10 +160,10 @@ export function splitCommand(input: string, opts: SplitCommandOptions = {}): str
 
 
 /**
- * level : 0 | 1 | 2 
+ * level : 0 | 1 | 2
  * 0 === debug-meta (pure time debug series)
  * 1 === --verbose ou -v (human readable)
- * 2 === verbose + debug-meta 
+ * 2 === verbose + debug-meta
  */
 
 export function extractVerbosity(args:string[]):VerbosityResult {
@@ -242,7 +242,7 @@ const argv = splitCommand(commandStr);
   const child = spawn(executable, args,{
     cwd:undefined,
     shell:false,
-    stdio:"pipe" // capture output todo: set as cli options ? 
+    stdio:"pipe" // capture output todo: set as cli options ?
   });
 
   // Capture output if piped (prevents terminal pollution + avoids backpressure)
@@ -261,6 +261,7 @@ const argv = splitCommand(commandStr);
     child.stderr.on('data', (chunk) => {
       childStderr = keepLast(childStderr,chunk);
     });
+    child.stderr.resume();
   }
 
   await new Promise<void>((resolve,reject) => {
