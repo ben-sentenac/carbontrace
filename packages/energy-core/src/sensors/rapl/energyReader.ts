@@ -28,13 +28,13 @@ export function createEnergyReader(options: EnergyReaderFactoryOptions): EnergyR
     console.warn('RAPL not available, falling back to empirical estimation');
 
     const fb = options.fallback ?? {};
-    
+
     const energyReader = new EmpiricalEnergyReader({
         pidleWatts: fb.pidleWatts,
         pmaxWatts: fb.pmaxWatts,
         tdpWatts: fb.tdpWatts,
-        idleFraction: fb.idleFraction ?? 0.07,
-        maxFraction: fb.maxFraction ?? 0.55,
+        idleFraction: fb.idleFraction ?? 0.2,
+        maxFraction: fb.maxFraction ?? 0.9,
         statFilePath: fb.statFilePath,
         log: fb.log ?? "silent"
     });
