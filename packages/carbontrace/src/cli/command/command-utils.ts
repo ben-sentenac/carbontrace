@@ -195,7 +195,7 @@ export function extractVerbosity(args:string[]):VerbosityResult {
     rest.push(arg);
   }
 
-  return { level, debugMetaExplicit, rest}
+  return { level:Math.min(level,2), debugMetaExplicit, rest}
 }
 
 export async function killGracefully(child: import("node:child_process").ChildProcess, timeoutMs = 2000):Promise<void> {
