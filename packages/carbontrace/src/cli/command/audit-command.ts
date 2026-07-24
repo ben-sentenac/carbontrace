@@ -282,8 +282,8 @@ export async function auditCommand(argv = process.argv.slice(2)): Promise<void> 
   console.log(`Target energy share: ${(result.processCpuEnergyShare * 100).toFixed(2)} %`);
   console.log("\n-----------POWER----------\n");
   console.log(`Average CPU Power:`);
-  console.log(`Host avg CPU power: ${result.hostCpuEnergyJoules / result.durationSeconds} W`);
-  console.log(`Target avg CPU power: ${result.processCpuEnergyJoules / result.durationSeconds} W`);
+  console.log(`Host avg CPU power: ${(result.hostCpuEnergyJoules / result.durationSeconds).toFixed(3)} W`);
+  console.log(`Target avg CPU power: ${(result.processCpuEnergyJoules / result.durationSeconds).toFixed(3)} W`);
   console.log("\n-----------CARBON---------\n");
   console.log(`CPU Carbon Footprint:`);
   console.log(`Emission Factor: ${emissionFactor} gCO2e/kWh`);
