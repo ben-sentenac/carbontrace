@@ -33,8 +33,8 @@ export function createEnergyReader(options: EnergyReaderFactoryOptions): EnergyR
         pidleWatts: fb.pidleWatts,
         pmaxWatts: fb.pmaxWatts,
         tdpWatts: fb.tdpWatts,
-        idleFraction: fb.idleFraction ?? 0.2,
-        maxFraction: fb.maxFraction ?? 0.9,
+        idleFraction: fb.idleFraction,
+        maxFraction: fb.maxFraction,
         statFilePath: fb.statFilePath,
         log: fb.log ?? "silent"
     });

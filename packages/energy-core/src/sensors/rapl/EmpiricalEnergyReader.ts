@@ -4,6 +4,19 @@ import { RaplSample } from "./RaplReader.js";
 
 // P_estimate_j = (P_idle + (P_max - p_idle) * load) * durationS
 
+/**
+ * Single source of truth for TDP-mode fraction defaults.
+ *
+ * idle=0.30: a package at idle typically draws 15-35% of TDP; 0.30 is a
+ *            reasonable midpoint for a server-class part.
+ * max=0.90:  sustained full-load package power sits a little below rated TDP.
+ *
+ * Coarse approximation only — measured --pidleW/--pmaxW is preferred.
+ */
+
+export const DEFAULT_IDLE_FRACTION = 0.3;
+export const DEFAULT_MAX_FRACTION = 0.9;
+
 export interface EmpiricalEnergyReaderOptions {
     //recomanded mode
     pidleWatts?: number;
@@ -11,14 +24,20 @@ export interface EmpiricalEnergyReaderOptions {
 
     //TDP mode
     tdpWatts?: number;
-    /**
-     * CPU TDP in Watts (approx)
-     * idleFraction = 0.20 => p_idle =  0.20  * tdp
-     * maxFraction = 1.00 => P_max = 1.00 * tdp
+     /**
+     * TDP-mode power model: P = (P_idle + (P_max - P_idle) * load), where
+     *   P_idle = idleFraction * tdpWatts
+     *   P_max  = maxFraction  * tdpWatts
+     *
+     * These fractions are a coarse approximation. A CPU package at idle still
+     * draws a substantial share of TDP (static leakage, uncore, cache, memory
+     * controller), so idleFraction well below ~0.15 is physically unrealistic
+     * for a server. Prefer measured --pidleW/--pmaxW over TDP mode when accuracy
+     * matters.
      */
 
-    idleFraction?: number;//default 0.07
-    maxFraction?: number; //0.55 as default
+    idleFraction?: number;//default DEFAULT_IDLE_FRACTION
+    maxFraction?: number; //default: DEFAULT_MAX_FRACTION
 
     statFilePath?: string;
 
@@ -59,8 +78,8 @@ export class EmpiricalEnergyReader {
             pidleWatts,
             pmaxWatts,
             tdpWatts,
-            idleFraction = 0.2,
-            maxFraction = 0.9,
+            idleFraction = DEFAULT_IDLE_FRACTION,
+            maxFraction = DEFAULT_MAX_FRACTION,
             statFilePath,
             log = "silent"
         } = options;
