@@ -131,7 +131,8 @@ export class EmpiricalEnergyReader {
                 deltaJ: 0,
                 deltaUj: 0,
                 packages: [],
-                wraps: 0
+                wraps: 0,
+                unhandledWraps:0,
             }
         }
 
@@ -143,7 +144,8 @@ export class EmpiricalEnergyReader {
                 deltaJ: 0,
                 deltaUj: 0,
                 packages: [],
-                wraps: 0
+                wraps: 0,
+                unhandledWraps:0,
             }
         }
 
@@ -175,6 +177,7 @@ export class EmpiricalEnergyReader {
             deltaJ,
             packages: [],
             wraps: 0,
+            unhandledWraps:0,
         }
     }
 

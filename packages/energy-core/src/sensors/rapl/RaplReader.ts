@@ -13,6 +13,7 @@ export interface RaplPackageSample {
     deltaUj: number; // µJ
     deltaJ: number;  // J
     wraps: number;
+    unhandledWraps: number; // wrap détecté mais non mesurable (borne inconnue)
     ok: boolean;     // lecture OK pour ce package sur ce tick ?
 }
 export interface RaplSample {
@@ -23,6 +24,7 @@ export interface RaplSample {
     deltaJ: number;    // J
     packages: RaplPackageSample[];
     wraps: number;
+    unhandledWraps: number; // total des wraps non mesurables sur ce tick
 }
 
 interface RaplReaderPackageState {
@@ -102,7 +104,7 @@ export class RaplReader {
                 name: p.name,
                 file: p.files.energyUj!,
                 lastUj: null,
-                maxEnergyUj:p.maxEnergyUj,
+                maxEnergyUj: p.maxEnergyUj,
             })),
         };
     }
@@ -161,6 +163,7 @@ export class RaplReader {
                 deltaUj: 0,
                 deltaJ: 0,
                 wraps: 0,
+                unhandledWraps:0,
                 ok,
             }));
 
@@ -175,6 +178,7 @@ export class RaplReader {
                 deltaJ: 0,
                 packages,
                 wraps: 0,
+                unhandledWraps:0,
             };
         }
 
@@ -188,6 +192,7 @@ export class RaplReader {
         }
 
         let wraps = 0n;
+        let unhandledWraps = 0n;
         let totalDeltaUj = 0n;
         let primed = false;
         let successfulReads = 0;
@@ -215,6 +220,7 @@ export class RaplReader {
             // read result for this package
             let pkgDeltaUj = 0n;
             let pkgWraps = 0n;
+            let pkgUnhandledWraps = 0n;
             let pkgOk = false;
 
             if (result.ok) {
@@ -232,10 +238,18 @@ export class RaplReader {
                     let deltaUj = currentUj - pkg.lastUj;
 
                     // wraparound
-                    if (deltaUj < 0n && pkg.maxEnergyUj !== null) {
-                        wraps += 1n;
-                        pkgWraps += 1n;
-                        deltaUj = (pkg.maxEnergyUj - pkg.lastUj) + currentUj;
+                    if (deltaUj < 0n) {
+
+                        if (pkg.maxEnergyUj !== null) {
+                            wraps += 1n;
+                            pkgWraps += 1n;
+                            deltaUj = (pkg.maxEnergyUj - pkg.lastUj) + currentUj;
+                        } else {
+                            unhandledWraps += 1n;
+                            pkgUnhandledWraps += 1n;
+                            deltaUj = 0n;
+                        }
+
                     }
 
                     if (deltaUj >= 0n) {
@@ -256,6 +270,7 @@ export class RaplReader {
                 deltaUj: deltaUjNumber,
                 deltaJ,
                 wraps: Number(pkgWraps),
+                unhandledWraps:Number(pkgUnhandledWraps),
                 ok: pkgOk,
             });
         }
@@ -272,6 +287,7 @@ export class RaplReader {
                 deltaJ: 0,
                 packages: packageSamples,
                 wraps: Number(wraps),
+                unhandledWraps:Number(unhandledWraps)
             };
         }
 
@@ -286,6 +302,7 @@ export class RaplReader {
             deltaJ: totalDeltaJ,
             packages: packageSamples,
             wraps: Number(wraps),
+            unhandledWraps:Number(unhandledWraps)
         };
     }
 
