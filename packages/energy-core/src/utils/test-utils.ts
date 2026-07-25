@@ -11,7 +11,7 @@ export async function createRaplPackages(baseDir:string, nodeName:string, { name
 
     const namePath = join(pkgDir, 'name');
     const energyPath = join(pkgDir, 'energy_uj');
-    const maxRangePath = join(pkgDir, 'max_energy_uj');
+    const maxRangePath = join(pkgDir, 'max_energy_range_uj');
 
     await Promise.all([
         writeFile(namePath, name, 'utf8'),
@@ -25,7 +25,7 @@ export async function createRaplPackages(baseDir:string, nodeName:string, { name
 
 export async function createStatFileUnderControl (baseDir:string,stats:{user:number,nice:number,system:number,idle:number}) {
     const _stats = {
-        user:stats.user ?? 1000, 
+        user:stats.user ?? 1000,
         nice:0,
         system:500,
         idle:2000
@@ -48,7 +48,7 @@ export async function createStatFileUnderControl (baseDir:string,stats:{user:num
             console.error(String(error));
         }
     }
-    
+
 }
 
 export function generateStatSample({ pid, utime, stime, starttime, delay, hz = 100 }: { pid: number; utime: number; stime: number; starttime: number; delay: number; hz?: number }) {

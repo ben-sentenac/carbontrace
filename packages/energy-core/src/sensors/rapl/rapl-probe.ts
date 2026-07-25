@@ -152,7 +152,7 @@ export async function raplProbe(basePath: string = DEFAULT_BASE_PATH): Promise<R
         const packagePath = path.join(basePath, dirname);
         const namePath = path.join(packagePath, 'name');
         const energyPath = path.join(packagePath, 'energy_uj');
-        const maxEnergyPath = path.join(packagePath, 'max_energy_uj');
+        const maxEnergyPath = path.join(packagePath, 'max_energy_range_uj');
 
         let name:string;
 
