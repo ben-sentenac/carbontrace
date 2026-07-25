@@ -79,7 +79,7 @@ export class RaplReader {
         );
 
         if (packages.length === 0) {
-            //probe OK But Unreadable packages 
+            //probe OK But Unreadable packages
             this.probeStatus = 'INTERNAL_ERROR';
             this.probeHints = 'Contract violation: probe.status=OK but no readable packages (this is a bug)';
             console.error('⚠️  [RaplReader] ASSERTION FAILED: probe contract violated');
@@ -102,10 +102,7 @@ export class RaplReader {
                 name: p.name,
                 file: p.files.energyUj!,
                 lastUj: null,
-                maxEnergyUj:
-                    p.maxEnergyUj != null && Number.isFinite(p.maxEnergyUj) && p.maxEnergyUj > 0
-                        ? BigInt(p.maxEnergyUj)
-                        : null,
+                maxEnergyUj:p.maxEnergyUj,
             })),
         };
     }
@@ -131,7 +128,7 @@ export class RaplReader {
      * Samples RAPL energy data and computes deltas since last sample.
      *
      * @param nowNs  Current timestamp in nanoseconds
-     * @returns      RaplSample containing energy deltas and power estimates    
+     * @returns      RaplSample containing energy deltas and power estimates
      *  Consider a temporary cache if readings are very frequent
      */
     async sample(nowNs: bigint): Promise<RaplSample | null> {
