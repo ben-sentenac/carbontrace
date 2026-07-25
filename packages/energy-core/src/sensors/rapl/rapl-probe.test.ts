@@ -65,23 +65,23 @@ test('rapl-probe test-suite', async (t) => {
             packages: [
                 {
                     vendor: 'intel',
-                    node: 'intel-rapl:0',   
+                    node: 'intel-rapl:0',
                     path: raplePackage.dir,
                     name: 'package-0',
                     energyPath: raplePackage.files.energyPath,
                     hasEnergyReadable: true,
                     reason: null,
-                    maxEnergyUj: 987654321,
+                    maxEnergyUj: 987654321n,
                     files: {
                         energyUj: raplePackage.files.energyPath,
                         maxEnergyUj: raplePackage.files.maxRangePath
                     }
                 }
             ],
-            hint: null  
+            hint: null
         }
 
         const probe = await raplProbe(tmpRoot);
         assert.deepStrictEqual(probe, resultOk);
-    }); 
+    });
 });
