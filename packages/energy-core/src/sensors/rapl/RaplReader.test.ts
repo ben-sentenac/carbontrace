@@ -31,6 +31,7 @@ test('RaplReader - sample energy consumption', async (t) => {
                 deltaJ:0,
                 deltaUj:0,
                 wraps:0,
+                unhandledWraps:0,
                 ok:true
             };
             const expectedPrime = {
@@ -43,7 +44,8 @@ test('RaplReader - sample energy consumption', async (t) => {
                 packages: [
                     expectedPackage
                 ],
-                wraps: 0
+                wraps: 0,
+                unhandledWraps:0
             }
             assert.ok(sample);
             assert.deepStrictEqual(sample, expectedPrime);
@@ -92,10 +94,12 @@ test('RaplReader - sample energy consumption', async (t) => {
                         deltaJ: 2,
                         deltaUj: 2000000,
                         wraps: 0,
+                        unhandledWraps:0,
                         ok: true
                     }
                 ],
-                wraps: 0
+                wraps: 0,
+                unhandledWraps:0
             }
             assert.ok(sample);
             assert.deepStrictEqual(sample, expectedSecond);
@@ -142,10 +146,12 @@ test('RaplReader - sample energy consumption', async (t) => {
                         deltaJ: 2,
                         deltaUj: 2000000,
                         wraps: 1,
+                        unhandledWraps:0,
                         ok: true
                     }
                 ],
-                wraps: 1
+                wraps: 1,
+                unhandledWraps:0,
             }
             assert.ok(sample);
             assert.deepStrictEqual(sample, expectedWrap);
@@ -202,6 +208,7 @@ test('RaplReader - sample energy consumption', async (t) => {
                         deltaJ: 2,
                         deltaUj: 2000000,
                         wraps: 0,
+                        unhandledWraps:0,
                         ok: true
                     },
                     {
@@ -210,11 +217,13 @@ test('RaplReader - sample energy consumption', async (t) => {
                         deltaJ: 2,
                         deltaUj: 2000000,
                         wraps: 0,
+                        unhandledWraps:0,
                         ok: true
                     }
 
                 ],
-                wraps: 0
+                wraps: 0,
+                unhandledWraps:0
             }
             assert.ok(sample);
             assert.deepStrictEqual(sample, expectedMulti);
@@ -231,7 +240,7 @@ test('RaplReader - sample energy consumption', async (t) => {
             await mkdir(path.join(temp, `intel-rapl:0`), { recursive: true });
             await writeFile(path.join(temp, `intel-rapl:0`, 'name'), 'package-0', 'utf8');
 
-            
+
 
             const probe = await raplProbe(temp);
             raplReader = new RaplReader({ probe, log: 'silent' });
@@ -252,7 +261,7 @@ test('RaplReader - sample energy consumption', async (t) => {
                 createRaplPackages(temp, 'intel-rapl:0', { name: 'package-0', energy: 1_000_000n }),
                 createRaplPackages(temp, 'intel-rapl:1', { name: 'package-1', energy: 2_000_000n })
             ]
-        );  
+        );
             //remove read permissions
             if (p1.files.energyPath) {
                 await chmod(p1.files.energyPath, 0o000);
@@ -262,7 +271,7 @@ test('RaplReader - sample energy consumption', async (t) => {
             //first sample to prime
             let dt = nowNs(0);
             const sample = await raplReader.sample(dt);
-            await writeFile(p0.files.energyPath, String(1_500_000n), 'utf8');           
+            await writeFile(p0.files.energyPath, String(1_500_000n), 'utf8');
             //second sample after 1s
             dt = nowNs(1.0);
             const sample2 = await raplReader.sample(dt);
@@ -277,7 +286,7 @@ test('RaplReader - sample energy consumption', async (t) => {
     });
 });
 
-test('clampDt utility function', async (t) => { 
+test('clampDt utility function', async (t) => {
 
     await t.test('CLAMP DT: clamp delta time between min and max thresholds', async () => {
         assert.strictEqual(clampDt(-1), 0.2);
