@@ -15,7 +15,7 @@ export interface RaplPackageInfo {
   energyPath: string;
   hasEnergyReadable: boolean;
   reason: string | null;
-  maxEnergyUj: number | null;
+  maxEnergyUj: bigint | null;
   files: {
     energyUj: string;
     maxEnergyUj: string;
@@ -152,7 +152,7 @@ export async function raplProbe(basePath: string = DEFAULT_BASE_PATH): Promise<R
         const packagePath = path.join(basePath, dirname);
         const namePath = path.join(packagePath, 'name');
         const energyPath = path.join(packagePath, 'energy_uj');
-        const maxEnergyPath = path.join(packagePath, 'max_energy_uj');
+        const maxEnergyPath = path.join(packagePath, 'max_energy_range_uj');
 
         let name:string;
 
@@ -171,12 +171,18 @@ export async function raplProbe(basePath: string = DEFAULT_BASE_PATH): Promise<R
             fs.readFile(maxEnergyPath, 'utf-8').catch(() => null)
         ]);
 
-        let maxEnergyUj:number | null = null;
+        let maxEnergyUj:bigint | null = null;
         if (maxEnergyContent) {
-            const maxEnergyValue = Number(String(maxEnergyContent).trim());
-            if (Number.isFinite(maxEnergyValue)) {
-                maxEnergyUj = maxEnergyValue;
+            const raw = String(maxEnergyContent).trim();
+            try {
+                const value = BigInt(raw);
+                if(value > 0n) {
+                    maxEnergyUj = value;
+                }
+            } catch (error) {
+                maxEnergyUj = null;
             }
+
         }
 
         let realEnergyPath = energyPath;
