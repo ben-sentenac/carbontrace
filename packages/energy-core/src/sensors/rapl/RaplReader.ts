@@ -24,7 +24,9 @@ export interface RaplSample {
     deltaJ: number;    // J
     packages: RaplPackageSample[];
     wraps: number;
-    unhandledWraps: number; // total des wraps non mesurables sur ce tick
+    unhandledWraps: number; // total des wraps non mesurables sur ce tick,
+    expectedPackages: number;   // packages exposés par le matériel (figé au démarrage)
+    readablePackages: number;   // packages effectivement lus sur ce tick
 }
 
 interface RaplReaderPackageState {
@@ -50,6 +52,7 @@ export class RaplReader {
     private log: 'silent' | 'debug';
     private probeStatus: string | null = null;
     private probeHints: string | null = null;
+    private expectedPackages = 0;
 
     public readonly mode = 'rapl';
 
@@ -75,6 +78,10 @@ export class RaplReader {
             }
             return;
         }
+        // Choix honnête : ce que le matériel expose, capturé AVANT
+        // le filtrage de lisibilité, pour qu'un package déjà cassé au probe reste
+        // comptabilisé comme manquant.
+        this.expectedPackages = (probe.packages || []).length;
 
         const packages: RaplPackageInfo[] = (probe.packages || []).filter(
             (p: RaplPackageInfo) => p.hasEnergyReadable && p.files.energyUj,
@@ -168,6 +175,7 @@ export class RaplReader {
             }));
 
             const ok = primeResults.some((r) => r.ok);
+            const readablePackages = primeResults.filter((r) =>r.ok).length;
 
             // primed = false :  not exploitable delta yet
             return {
@@ -179,6 +187,8 @@ export class RaplReader {
                 packages,
                 wraps: 0,
                 unhandledWraps:0,
+                expectedPackages:this.expectedPackages,
+                readablePackages,
             };
         }
 
@@ -287,7 +297,9 @@ export class RaplReader {
                 deltaJ: 0,
                 packages: packageSamples,
                 wraps: Number(wraps),
-                unhandledWraps:Number(unhandledWraps)
+                unhandledWraps:Number(unhandledWraps),
+                expectedPackages:this.expectedPackages,
+                readablePackages:successfulReads
             };
         }
 
@@ -302,7 +314,9 @@ export class RaplReader {
             deltaJ: totalDeltaJ,
             packages: packageSamples,
             wraps: Number(wraps),
-            unhandledWraps:Number(unhandledWraps)
+            unhandledWraps:Number(unhandledWraps),
+            expectedPackages:this.expectedPackages,
+            readablePackages:successfulReads,
         };
     }
 
