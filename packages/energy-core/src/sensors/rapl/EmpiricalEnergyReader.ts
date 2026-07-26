@@ -133,6 +133,8 @@ export class EmpiricalEnergyReader {
                 packages: [],
                 wraps: 0,
                 unhandledWraps:0,
+                expectedPackages:0,
+                readablePackages:0
             }
         }
 
@@ -146,6 +148,8 @@ export class EmpiricalEnergyReader {
                 packages: [],
                 wraps: 0,
                 unhandledWraps:0,
+                expectedPackages:0,
+                readablePackages:0
             }
         }
 
@@ -178,6 +182,8 @@ export class EmpiricalEnergyReader {
             packages: [],
             wraps: 0,
             unhandledWraps:0,
+            expectedPackages:0,
+            readablePackages:0
         }
     }
 

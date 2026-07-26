@@ -32,7 +32,7 @@ test('RaplReader - sample energy consumption', async (t) => {
                 deltaUj:0,
                 wraps:0,
                 unhandledWraps:0,
-                ok:true
+                ok:true,
             };
             const expectedPrime = {
                 ok: true,
@@ -45,7 +45,9 @@ test('RaplReader - sample energy consumption', async (t) => {
                     expectedPackage
                 ],
                 wraps: 0,
-                unhandledWraps:0
+                unhandledWraps:0,
+                expectedPackages:1,
+                readablePackages:1
             }
             assert.ok(sample);
             assert.deepStrictEqual(sample, expectedPrime);
@@ -99,7 +101,9 @@ test('RaplReader - sample energy consumption', async (t) => {
                     }
                 ],
                 wraps: 0,
-                unhandledWraps:0
+                unhandledWraps:0,
+                expectedPackages:1,
+                readablePackages:1
             }
             assert.ok(sample);
             assert.deepStrictEqual(sample, expectedSecond);
@@ -152,6 +156,8 @@ test('RaplReader - sample energy consumption', async (t) => {
                 ],
                 wraps: 1,
                 unhandledWraps:0,
+                expectedPackages:1,
+                readablePackages:1
             }
             assert.ok(sample);
             assert.deepStrictEqual(sample, expectedWrap);
@@ -223,7 +229,9 @@ test('RaplReader - sample energy consumption', async (t) => {
 
                 ],
                 wraps: 0,
-                unhandledWraps:0
+                unhandledWraps:0,
+                expectedPackages:2,
+                readablePackages:2
             }
             assert.ok(sample);
             assert.deepStrictEqual(sample, expectedMulti);
