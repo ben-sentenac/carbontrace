@@ -44,7 +44,7 @@ export type ProcessStatSnapshot =
     | ProcessStatErrorSnapshot;
 
 interface ProcessCpuReaderState {
-    last_app_ticks: bigint | null;//utime + stime at last tick 
+    last_app_ticks: bigint | null;//utime + stime at last tick
     last_start_time_ticks: bigint | null;//starttime of process at last tick
     primed: boolean;//fist read has been done
 }
@@ -60,12 +60,31 @@ const STAT_FIELDS_NAME = [
     'env_start', 'env_end', 'exit_code'
 ];
 
+/** Erreur levée quand un champ requis de /proc/<pid>/stat est absent ou non entier. */
+class MalformedStatError extends Error {
+    constructor(message:string) {
+        super(message);
+        this.name = 'MalformedStatError';
+    }
+}
+/**
+ * Parse un compteur entier de /proc/<pid>/stat directement en bigint.
+ * Les compteurs (jiffies, starttime) sont toujours des entiers : on évite
+ * Number() qui perdrait la précision au-delà de 2^53 et produirait NaN sur
+ * un champ absent (fichier tronqué quand le process meurt en cours de lecture).
+ */
+function parseStatBigInt(raw:string | undefined,field:string):bigint {
+    if(raw === undefined || !/^-?\d+$/.test(raw)) {
+        throw new MalformedStatError(`missing or non-integer field "${field}": ${raw}`);
+    }
+    return BigInt(raw);
+}
 /**
  * check if a PID is valid
  * must exclusively be a non-negative integer
  * must exclude pid 0 (system idle process) and process.pid (current process)
- * @param pid 
- * @returns 
+ * @param pid
+ * @returns
  */
 export function pidIsValid(pid: number): boolean {
     if (pid < 0 || !Number.isInteger(pid) || pid === 0) {
@@ -93,37 +112,36 @@ export async function parsePidStatFile(statFilePath: string): Promise<ProcessSta
             pid,
             comm
         };
-
-        const fields = STAT_FIELDS_NAME.slice(2); // skip 'pid' and 'comm' as they are already handled
         const values = rest;
 
-        for (let i = 0; i < fields.length; i++) {
-            const field = fields[i];
-            const raw = values[i];
-            if (i === 0) {
-                // state is string
-                pidStat[field] = raw ?? null;
-            } else {
-                const num = Number(raw);
-                pidStat[field] = Math.abs(num) > Number.MAX_SAFE_INTEGER ? BigInt(raw) : num;
-            }
+        const state = values[0];
+        if(state === undefined) {
+            throw new MalformedStatError(`missing field "state`);
+        }
+
+        const ppidRaw = values[1];
+        if(ppidRaw === undefined || !/^-?\d+$/.test(ppidRaw)) {
+            throw new MalformedStatError(`missing or non-integer field "ppid": ${ppidRaw}`);
         }
         const snapshot: ProcessStatSnapshot = {
             ok: true,
             timeStamp: new Date().toISOString(),
             pid,
-            comm: pidStat.comm as string,
-            state: pidStat.state as string,
-            ppid: Number(pidStat.ppid),
-            utime: BigInt(pidStat.utime as number | bigint | string),
-            stime: BigInt(pidStat.stime as number | bigint | string),
-            cutime: BigInt(pidStat.cutime as number | bigint | string),
-            cstime: BigInt(pidStat.cstime as number | bigint | string),
-            starttime: BigInt(pidStat.starttime as number | bigint | string),
+            comm,
+            state,
+            ppid: Number(ppidRaw),
+            utime: parseStatBigInt(values[11], 'utime'),
+            stime: parseStatBigInt(values[12], 'stime'),
+            cutime: parseStatBigInt(values[13], 'cutime'),
+            cstime: parseStatBigInt(values[14], 'cstime'),
+            starttime: parseStatBigInt(values[19], 'starttime'),
         };
 
         return snapshot;
     } catch (error) {
+        if(error instanceof MalformedStatError) {
+            return { ok: false, error: 'malformed_stat'};
+        }
         const code = extractErrorCode(error);
 
         return {
@@ -159,7 +177,7 @@ export class ProcessCpuReader {
         this.statFilePath = options.statFilePath ?? `/proc/${this.pid}/stat`;
 
         this.state = {
-            last_app_ticks: null,//utime + stime at last tick 
+            last_app_ticks: null,//utime + stime at last tick
             last_start_time_ticks: null,//starttime of process at last tick
             primed: false//fist read has been done
         }
