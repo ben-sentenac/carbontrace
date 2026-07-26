@@ -155,8 +155,7 @@ export function computeCpuUtilization(snapshot: CpuTimes): CpuTotal {
         snapshot.nice +
         snapshot.system +
         snapshot.irq +
-        snapshot.softirq +
-        snapshot.steal;
+        snapshot.softirq;
 
     return { idle, active, total: idle + active };
 }
@@ -191,7 +190,7 @@ export class CpuReader {
 
     async sample(nowNs: bigint): Promise<CpuSample | CpuSampleError> {
         const snapshot = await parseProcStat(this.statFilePath);
-        
+
         if (snapshot.ok === false) {
             return { ok: false, error: snapshot.error };
         }
@@ -223,7 +222,7 @@ export class CpuReader {
             };
         }
 
-        // --- 2) calculate deltas --- 
+        // --- 2) calculate deltas ---
 
         // log debug
         if (this.log === "debug" && process.stdout.isTTY) {
