@@ -49,16 +49,23 @@ interface ProcessCpuReaderState {
     primed: boolean;//fist read has been done
 }
 
-const STAT_FIELDS_NAME = [
-    'pid', 'comm', 'state', 'ppid', 'pgrp', 'session', 'tty_nr', 'tpgid', 'flags',
-    'minflt', 'cminflt', 'majflt', 'cmajflt', 'utime', 'stime', 'cutime', 'cstime',
-    'priority', 'nice', 'num_threads', 'itrealvalue', 'starttime', 'vsize', 'rss',
-    'rsslim', 'startcode', 'endcode', 'startstack', 'kstkesp', 'kstkeip', 'signal',
-    'blocked', 'sigignore', 'sigcatch', 'wchan', 'nswap', 'cnswap', 'exit_signal',
-    'processor', 'rt_priority', 'policy', 'delayacct_blkio_ticks', 'guest_time',
-    'cguest_time', 'start_data', 'end_data', 'start_brk', 'arg_start', 'arg_end',
-    'env_start', 'env_end', 'exit_code'
-];
+/**
+ * Positions (0-based) des champs de /proc/<pid>/stat dont on a besoin, comptées
+ * APRÈS le champ comm — c'est-à-dire dans le tableau obtenu en découpant ce qui
+ * suit la parenthèse fermante de comm. L'ordre de ces champs est figé par le
+ * kernel (voir man 5 proc, section /proc/[pid]/stat).
+ *
+ *   après comm :  state(0) ppid(1) ... utime(11) stime(12) cutime(13) cstime(14) ... starttime(19)
+ */
+const STAT_FIELD_INDEX = {
+    state: 0,
+     ppid: 1,
+    utime: 11,
+    stime: 12,
+    cutime: 13,
+    cstime: 14,
+    starttime: 19,
+};
 
 /** Erreur levée quand un champ requis de /proc/<pid>/stat est absent ou non entier. */
 class MalformedStatError extends Error {
@@ -108,21 +115,16 @@ export async function parsePidStatFile(statFilePath: string): Promise<ProcessSta
         const comm = statContent.slice(firstParen + 1, lastParen);
         const rest = statContent.slice(lastParen + 1).trim().split(/\s+/);
 
-        const pidStat: Record<string, string | number | bigint | undefined> = {
-            pid,
-            comm
-        };
-        const values = rest;
-
-        const state = values[0];
-        if(state === undefined) {
-            throw new MalformedStatError(`missing field "state`);
+        const state = rest[STAT_FIELD_INDEX.state];
+        if (state === undefined) {
+            throw new MalformedStatError('missing field "state"');
         }
 
-        const ppidRaw = values[1];
-        if(ppidRaw === undefined || !/^-?\d+$/.test(ppidRaw)) {
+        const ppidRaw = rest[STAT_FIELD_INDEX.ppid];
+        if (ppidRaw === undefined || !/^-?\d+$/.test(ppidRaw)) {
             throw new MalformedStatError(`missing or non-integer field "ppid": ${ppidRaw}`);
         }
+
         const snapshot: ProcessStatSnapshot = {
             ok: true,
             timeStamp: new Date().toISOString(),
@@ -130,11 +132,11 @@ export async function parsePidStatFile(statFilePath: string): Promise<ProcessSta
             comm,
             state,
             ppid: Number(ppidRaw),
-            utime: parseStatBigInt(values[11], 'utime'),
-            stime: parseStatBigInt(values[12], 'stime'),
-            cutime: parseStatBigInt(values[13], 'cutime'),
-            cstime: parseStatBigInt(values[14], 'cstime'),
-            starttime: parseStatBigInt(values[19], 'starttime'),
+            utime: parseStatBigInt(rest[STAT_FIELD_INDEX.utime], 'utime'),
+            stime: parseStatBigInt(rest[STAT_FIELD_INDEX.stime], 'stime'),
+            cutime: parseStatBigInt(rest[STAT_FIELD_INDEX.cutime], 'cutime'),
+            cstime: parseStatBigInt(rest[STAT_FIELD_INDEX.cstime], 'cstime'),
+            starttime: parseStatBigInt(rest[STAT_FIELD_INDEX.starttime], 'starttime'),
         };
 
         return snapshot;
